@@ -2,8 +2,11 @@
 #define INIT_HELPERS_H
 
 #include <vector>
+#include <iostream>
 #include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <unordered_map>
 #include <string>
 
 struct total_data {
@@ -35,5 +38,13 @@ struct total_data {
     }
   }
 };
+
+bool inBounds(cv::Point2f &p, cv::Mat &img);
+
+bool Track(std::vector<cv::Point2f> &edge, 
+  cv::Mat &img1, cv::Mat &img2,
+  float &dx, float &dy);
+
+void initialise(total_data &input, std::string out_dir);
 
 #endif

@@ -16,5 +16,7 @@ int main(int argc, char **argv)
   total_data input(FLAGS_dirname, FLAGS_num_images);
   input.dump_data(FLAGS_out_dir);
   
+  initialise(input, FLAGS_out_dir);
+
   return 0;
 }
