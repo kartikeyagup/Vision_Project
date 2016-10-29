@@ -3,6 +3,10 @@ if [ ! -d build ]; then
   mkdir build
 fi
 
+if [ ! -d out_data ]; then 
+  mkdir out_data
+fi
+
 cd build
 cmake ..
 rm -rf obsremove

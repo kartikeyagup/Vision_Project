@@ -48,12 +48,31 @@ namespace std {
   };
 }
 
+/**
+ * @brief Checkes if a point lies in the bounds of an image
+ */
 bool inBounds(cv::Point2f &p, cv::Mat &img);
 
+/**
+ * @brief Tracks an edge from 1 image to another
+ * 
+ * @param edge vector of points correspodnign to edge
+ * @param img1 base image
+ * @param img2 2nd image
+ * @param dx displacement along x which is obtained
+ * @param dy displacement along y which is obtained
+ * @return true or false if the edge was matched in 2nd image
+ *          if true, then dx and dy are the displacements
+ */
 bool Track(std::vector<cv::Point2f> &edge, 
   cv::Mat &img1, cv::Mat &img2,
   int &dx, int &dy);
 
+/**
+ * @brief Function meant to initialise the data
+ * @param input all images
+ * @param out_dir debug directory to dump images in
+ */
 void initialise(total_data &input, std::string out_dir);
 
 #endif
