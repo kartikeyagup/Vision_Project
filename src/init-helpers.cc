@@ -6,7 +6,7 @@ bool inBounds(cv::Point2f &p, cv::Mat &img) {
 
 bool Track(std::vector<cv::Point2f> &edge, 
     cv::Mat &img1, cv::Mat &img2,
-    float &dx, float &dy) {
+    int &dx, int &dy) {
   int gridsize = 5;
   bool answer = false;
   float best = 10000;
@@ -47,6 +47,10 @@ bool Track(std::vector<cv::Point2f> &edge,
     answer = true;
   }
   return answer;
+}
+
+bool comfun(const std::pair<cv::Point2i, int> &p1,const std::pair<cv::Point2i, int> &p2) {
+  return (p1.second > p2.second);
 }
 
 void initialise(total_data &input, std::string out_dir) {
@@ -93,14 +97,17 @@ void initialise(total_data &input, std::string out_dir) {
   int tot(0), mt(0);
   // cv::namedWindow("initial0");
   // cv::namedWindow("initial1");
+  std::unordered_map<cv::Point2i, int> counts_of_tr;
   for (auto it: all_edges) {
     tot++;
-    float dx, dy;
+    int dx, dy;
     // if (it.second.size() < 50) {
     //   continue;
     // }
     if (Track(it.second, input.base_img, input.frames[0],  dx, dy)) {
       mt++;
+      // std::cout << dx << " , "<< dy << "\n";
+      counts_of_tr[cv::Point2i(dx, dy)]++;
       // std::cout << it.first << "\t" << it.second.size() <<  "\n";
       // // std::cout << dx << "\t" << dy << "\n";
       // cv::Rect bb = cv::boundingRect(it.second);
@@ -123,5 +130,15 @@ void initialise(total_data &input, std::string out_dir) {
       // }
     }
   }
+  std::vector<std::pair<cv::Point2i, int> > counts_pairs;
+  for (auto it : counts_of_tr) {
+    counts_pairs.push_back(std::make_pair(it.first, it.second));
+    std::cout << it.first << "\t" << it.second << "\n";
+  }
+  std::sort(counts_pairs.begin(), counts_pairs.end(), comfun);
+  assert (cv::Point2i(1,1) == cv::Point2i(1,1));
   std::cout << "Matched " << mt << " out of " << tot << "\n";
+  for (auto it: counts_pairs) {
+    std::cout << it.first << "\t" << it.second << "\n";
+  }
 }

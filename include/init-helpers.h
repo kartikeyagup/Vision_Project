@@ -39,11 +39,20 @@ struct total_data {
   }
 };
 
+namespace std {
+  template <>
+  struct hash<cv::Point2i> {
+    std::size_t operator()(const cv::Point2i& k) const {
+      return ((hash<int>()(k.x)) ^ (hash<int>()(k.y)));
+    }
+  };
+}
+
 bool inBounds(cv::Point2f &p, cv::Mat &img);
 
 bool Track(std::vector<cv::Point2f> &edge, 
   cv::Mat &img1, cv::Mat &img2,
-  float &dx, float &dy);
+  int &dx, int &dy);
 
 void initialise(total_data &input, std::string out_dir);
 
