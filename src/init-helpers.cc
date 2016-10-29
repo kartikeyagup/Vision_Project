@@ -1,7 +1,8 @@
 #include "init-helpers.h"
+#include "opencv2/calib3d/calib3d.hpp"
 
 bool inBounds(cv::Point2f &p, cv::Mat &img) {
-  return ((p.x < img.cols-1) && (p.y < img.rows-1));
+  return ((p.x < img.cols-1) && (p.y < img.rows-1) && (p.x > 0) && (p.y > 0));
 }
 
 bool Track(std::vector<cv::Point2f> &edge, 
@@ -141,4 +142,9 @@ void initialise(total_data &input, std::string out_dir) {
   for (auto it: counts_pairs) {
     std::cout << it.first << "\t" << it.second << "\n";
   }
+
+  // cv::Mat alias;
+  // Requires a vector. Isnt that what I'm passing KG?
+  // alias = cv::findHomography(input.frames, input.base_img, CV_RANSAC);
+  // cv::imwrite(out_dir+"try.png", alias);
 }

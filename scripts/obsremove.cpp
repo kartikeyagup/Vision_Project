@@ -6,6 +6,7 @@
 DEFINE_string(dirname, "init_data/", "Directory from which images need to picked up.");
 DEFINE_int32(num_images, 5, "Number of images which need to be picked up");
 DEFINE_string(out_dir, "out_data/", "Directory to dump the results in.");
+DEFINE_bool(reflection, true, "Removing a reflection or occlusion");
 
 int main(int argc, char **argv)
 {
