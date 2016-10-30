@@ -14,5 +14,5 @@ rm -rf obsremove
 make -j4
 if [ -f obsremove ]; then 
   cd ..
-  build/obsremove -dirname=init_data/ -num_images=5 -out_dir=out_data/
+  build/obsremove -dirname=init_data2/ -num_images=5 -out_dir=out_data/
 fi

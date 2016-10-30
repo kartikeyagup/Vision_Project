@@ -32,4 +32,5 @@ add_executable(obsremove scripts/obsremove.cpp)
 
 target_link_libraries(obsremove ${OpenCV_LIBS}
                                 helpers-cc
-                                gflags)
+                                gflags
+                                opencv_calib3d)
