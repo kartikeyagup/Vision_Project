@@ -32,7 +32,6 @@ bool Track(std::vector<cv::Point2f> &edge,
         tot /= 3.0;
         tot /= edge.size();
         tot = fabs(tot);
-        // std::cout << delta << " " << tot <<" ";
 
         if (tot < best) {
           best= tot;
@@ -42,8 +41,7 @@ bool Track(std::vector<cv::Point2f> &edge,
       }
     }
   }
-  if (best < 10) {
-    // std::cout << best ;
+  if (best < 1) {
     answer = true;
   }
   return answer;
@@ -95,44 +93,22 @@ void initialise(total_data &input, std::string out_dir) {
     }
   }
   int tot(0), mt(0);
-  // cv::namedWindow("initial0");
-  // cv::namedWindow("initial1");
-  std::unordered_map<cv::Point2i, int> counts_of_tr;
   std::vector<cv::Point2f> initial_pts, final_pts, initial_pts_fg, final_pts_fg;
   std::vector<std::pair<cv::Point2f, std::vector<cv::Point2f> > > Edges, Edges_2, Edges_bg, Edges_fg;
   for (auto it: all_edges) {
     tot++;
     int dx, dy;
-    if (it.second.size() < 1) {
+    if (it.second.size() < 10) {
       continue;
     } 
     if (Track(it.second, input.base_img, input.frames[0],  dx, dy)) {
       mt++;
       Edges.push_back(std::make_pair(cv::Point2f(dx, dy), it.second));
-      // std::cout << dx << " , "<< dy << "\n";
-      counts_of_tr[cv::Point2i(dx, dy)]++;
-      // std::cout << it.first << "\t" << it.second.size() <<  "\n";
-      // // std::cout << dx << "\t" << dy << "\n";
       cv::Rect bb = cv::boundingRect(it.second);
-      initial_pts.push_back(cv::Point2f(bb.x + bb.width/2, bb.y + bb.y/2));
-      final_pts.push_back(cv::Point2f(dx + bb.x + bb.width/2, dy + bb.y + bb.y/2));
-      // cv::Point2f plc(bb.x, bb.y);
-      // cv::Point2f prb(bb.x + bb.width, bb.y + bb.height);
-      // std::cout << plc << "\n";
-      // std::cout << prb << "\n";
-      // cv::Mat img0, img1;
-      // input.base_img.copyTo(img0);
-      // input.frames[0].copyTo(img1);
-      // cv::rectangle(img0, plc, prb, cv::Scalar(0,0,0), 2, 4);
-      // cv::rectangle(img1, plc + cv::Point2f(dx, dy), prb + cv::Point2f(dx, dy), cv::Scalar(0,0,0), 2, 4);
-      // for (auto it1 : it.second) {
-      //   cv::circle(img0, it1, 1, cv::Scalar(0,0,255), -1);
-      // }
-      // cv::imshow("initial0", img0);
-      // cv::imshow("initial1", img1);
-      // while (cv::waitKey(10) != 27) {
-
-      // }
+      for (auto it1: it.second) {
+        initial_pts.push_back(it1);
+        final_pts.push_back(it1 + cv::Point2f(dx, dy));
+      }
     }
   }
   std::cout << "Matched " << mt << " out of " << tot << "\n";
@@ -149,45 +125,39 @@ void initialise(total_data &input, std::string out_dir) {
 
   cv::Mat tr1, tr2;
   std::vector<uchar> mask1, mask2;
+  std::vector<cv::Point2f> points_bg, points_fg;
   assert(initial_pts.size() == final_pts.size());
-  assert(Edges.size() == initial_pts.size());
-  tr1 = cv::findHomography(initial_pts, final_pts, CV_RANSAC, 3, mask1);
+  tr1 = cv::findHomography(final_pts, initial_pts, CV_RANSAC, 3, mask1);
   std::cout << tr1.rows << "\t" << tr1.cols << "\t" << mask1.size() << "\n" ;
   int countbg(0), countfg(0);
   for (int i=0; i<mask1.size(); i++) {
     if (!(mask1[i])) {
-      Edges_2.push_back(Edges[i]);
       initial_pts_fg.push_back(initial_pts[i]);
       final_pts_fg.push_back(final_pts[i]);
     } else {
-      Edges_bg.push_back(Edges[i]);
+      points_bg.push_back(initial_pts[i]);
       countbg++;
     }
   }
   std::cout << countbg << " inliers in bg\n";
   assert(initial_pts_fg.size() == final_pts_fg.size());
-  tr2 = cv::findHomography(initial_pts_fg, final_pts_fg, CV_RANSAC, 3, mask2);
+  tr2 = cv::findHomography(final_pts_fg, initial_pts_fg, CV_RANSAC, 3, mask2);
   std::cout << tr2.rows << "\t" << tr2.cols << "\t" << mask2.size() << "\n" ;
   assert(mask2.size() == initial_pts_fg.size());
-  assert(Edges_2.size() == mask2.size());
   for (int i=0; i<mask2.size(); i++) {
     if (mask2[i]) {
-      Edges_fg.push_back(Edges_2[i]);
+      points_fg.push_back(initial_pts_fg[i]);
       countfg++;
     }
   }
   cv::Mat bg(baseEdges.size(), CV_8UC3);
   cv::Mat fg(baseEdges.size(), CV_8UC3);
-  for (auto it: Edges_bg) {
-    for (auto it1: it.second) {
-      cv::circle(bg, it1, 2, cv::Scalar(0,0,255), -1);
-    }
+  for (auto it: points_bg) {
+      cv::circle(bg, it, 2, cv::Scalar(0,0,255), -1);
   }
 
-  for (auto it: Edges_fg) {
-    for (auto it1: it.second) {
-      cv::circle(fg, it1, 2, cv::Scalar(0,0,255), -1);
-    }
+  for (auto it: points_fg) {
+      cv::circle(fg, it, 2, cv::Scalar(0,0,255), -1);
   }
 
   cv::imwrite(out_dir + "edges_bg.png", bg);
