@@ -47,16 +47,35 @@
 #include "ceres/ceres.h"
 #include "gflags/gflags.h"
 #include "glog/logging.h"
+#include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <cmath>
+
 using ceres::AutoDiffCostFunction;
 using ceres::CostFunction;
 using ceres::Problem;
 using ceres::Solver;
 using ceres::Solve;
 
-cv::Mat Io, Ib, Vo, Vb, W, A;
+cv::Mat Io, Ib, W, A;
+std::vector <cv::Mat> Vo,Vb;
 
-cv::Mat elementmultiply(cv::Mat, cv::mat);
-cv::Mat convolve(cv::Mat,cv::Mat);
+double img_rows;
+double img_cols;
+
+int num_images;
+
+int get_ij(cv::Mat &inp, int i, int j) {
+  return (int) inp.at<uchar>(i,j);
+}
+
+cv::Mat elementmultiply(cv::Mat &, cv::Mat&);
+cv::Mat convolve(cv::Mat& ,cv::Mat&);
+cv::Mat warp(cv::Mat &, cv::Mat&);
+
+
+// T* ka kya karna hai? Har jagah, residual has to be a double. 
 
 struct data_term {
   template <typename T> bool operator()(const T* const Io,
@@ -65,8 +84,17 @@ struct data_term {
                                         T* residual) const {
     // f1 = x1 + 10 * x2;
     residual[0] = T(0.0);
-    for(int i=0;i<total_data.num_images;i++){
-    	residual[0]+=l1norm(total_data.frames[i] - elementmultiply(convolve(W,Vo),Io) - elementmultiply(elementmultiply(convolve(W,Vo),A),elementmultiply(convolve(W,Vb),Ib)));
+    for(int t=0;t<total_data.num_images;t++){
+      cv::Mat iovo = warp(Io,Vo[t]);
+      cv::Mat ibvb = warp(Ib,Vb[t]);
+      for(int i=0;i<img_rows;i++){
+        for(int j=0;j<img_cols;j++){
+          if(get_ij(iovo,i,j) != 0 && get_ij(ibvb,i,j) != 0){
+            residual[0]+=l1norm(get_ij(total_data.frames[t],i,j) - get_ij(iovo,i,j) - get_ij(iovo,i,j)*get_ij(ibvb,i,j);
+          }
+        }
+      }
+    	
     }
     return true;
   }
@@ -124,8 +152,17 @@ struct data_term2 {
                                         T* residual) const {
     // f1 = x1 + 10 * x2;
     residual[0] = T(0.0);
-    for(int i=0;i<total_data.num_images;i++){
-    	residual[0]+=l1norm(total_data.frames[i] - elementmultiply(convolve(W,Vo),Io) - elementmultiply(elementmultiply(convolve(W,Vo),A),elementmultiply(convolve(W,Vb),Ib)));
+    for(int t=0;t<total_data.num_images;t++){
+    	// residual[0]+=l1norm(total_data.frames[i] - elementmultiply(convolve(W,Vo),Io) - elementmultiply(elementmultiply(convolve(W,Vo),A),elementmultiply(convolve(W,Vb),Ib)));
+      cv::Mat iovo = warp(Io,Vo[t]);
+      cv::Mat ibvb = warp(Ib,Vb[t]);
+      for(int i=0;i<img_rows;i++){
+        for(int j=0;j<img_cols;j++){
+          if(get_ij(iovo,i,j) != 0 && get_ij(ibvb,i,j) != 0){
+            residual[0]+=l1norm(get_ij(total_data.frames[t],i,j) - get_ij(iovo,i,j) - get_ij(iovo,i,j)*get_ij(ibvb,i,j);
+          }
+        }
+      }
     }
     return true;
   }
@@ -135,16 +172,16 @@ DEFINE_string(minimizer, "trust_region",
               "Minimizer type to use, choices are: line_search & trust_region");
 
 
-int ceressolver(cv::Mat Io, cv:Mat Ib, cv::Mat A, cv::Mat Vo, cv::Mat Vb, cv::Mat W) {
+int ceressolver(cv::Mat Io, cv::Mat Ib, cv::Mat A, std::vector<cv::Mat> Vo, std::vector<cv::Mat> Vb) {
   // google::ParseCommandLineFlags(&argc, &argv, true);
   // google::InitGoogleLogging(argv[0]);
 
   cv::Mat guess_Io = Io;
   cv::Mat guess_Ib = Ib;
   cv::Mat guess_A = A;
-  cv::Mat guess_Vo = Vo;
-  cv::Mat guess_Vb = Vb;
   cv::Mat guess_W = W;
+  std::vector <cv::Mat> guess_Vo = Vo;
+  std::vector <cv::Mat> guess_Vb = Vb;
   //Assuming the input images to be total_data.frames[i]
   Problem problem;
   // Add residual terms to the problem using the using the autodiff
@@ -185,14 +222,15 @@ int ceressolver(cv::Mat Io, cv:Mat Ib, cv::Mat A, cv::Mat Vo, cv::Mat Vb, cv::Ma
 
   Problem problem2;
 
-  problem2.AddResidualBlock(new AutoDiffCostFunction<data_term, 1, 1, 1>(new data_term2),
-                           NULL,
-                           &guess_Vo, &guess_Vb);
+  for(int t=0;t<num_images;t++){
+    problem2.AddResidualBlock(new AutoDiffCostFunction<data_term, 1, 1, 1>(new data_term2),
+                             NULL,
+                             &guess_Vo[t], &guess_Vb[t]);
 
-  problem2.AddResidualBlock(new AutoDiffCostFunction<data_term, 1, 1, 1>(new F5),
-                           NULL,
-                           &guess_Vo, &guess_Vb);
-  
+    problem2.AddResidualBlock(new AutoDiffCostFunction<data_term, 1, 1, 1>(new F5),
+                             NULL,
+                             &guess_Vo[t], &guess_Vb[t]);
+  }
   Solver::Options options2;
   LOG_IF(FATAL, !ceres::StringToMinimizerType(FLAGS_minimizer,
                                               &options.minimizer_type))
@@ -232,30 +270,30 @@ cv::Mat elementmultiply(cv::Mat input1, cv::Mat input2){
 
 cv::Mat convolve(cv::Mat src, cv::Mat kernel){
 	cv::Mat result;
-	cv::filter2D(src, result, -1, kernel, Point(-1,1), 0, BORDER_DEFAULT);
+	cv::filter2D(src, result, -1, kernel, cv::Point(-1,1), 0, cv::BORDER_DEFAULT);
 	return result;
 }
 
-cv::Mat delta(cv::Mat mat){
+cv::Mat delta(cv::Mat mat) {
   cv::Mat grad_x,grad_y,grad;
-  mat.copyTo(delta);
+  // mat.copyTo(delta);
   cv::Mat kernel;
-  cv::Sobel(mat, grad_x, CV_16S, 1, 0, 3, 1, 0, BORDER_DEFAULT);
-  cv::Sobel(mat, grad_y, CV_16S, 0, 1, 3, 1, 0, BORDER_DEFAULT);
+  cv::Sobel(mat, grad_x, CV_16S, 1, 0, 3, 1, 0, cv::BORDER_DEFAULT);
+  cv::Sobel(mat, grad_y, CV_16S, 0, 1, 3, 1, 0, cv::BORDER_DEFAULT);
   convertScaleAbs( grad_x, grad_x );
   convertScaleAbs( grad_y, grad_y );
 
-  addWeighted( abs_grad_x, 0.5, abs_grad_y, 0.5, 0, grad );
+  addWeighted(grad_x, 0.5, grad_y, 0.5, 0, grad );
 
   return grad;
 }
 
 double l1norm(cv::Mat input){
 	double answer = 0;
-	for(int j = 0 ; j < input.cols , j++){
+	for(int j = 0 ; j < input.cols ; j++){
 		double mysum = 0;
 		for(int i = 0 ; i < input.rows ; i++){
-			mysum += abs(input[i][j]);
+			mysum += abs(get_ij(input,i,j));
 		}
 		if(mysum > answer){
 			answer = mysum;
@@ -267,7 +305,20 @@ double l1norm(cv::Mat input){
 double l2norm(cv::Mat input){
 	// find eigen values of input*input'
 	// Largest eigen value ka under-root is the answer
-	return 0;
+  Eigen::Map<Eigen::Matrix3f> eigen(input.data());
+  // Eigen::MatrixXf eigenTranspose = eigen.transpose();
+  // Eigen::MatrixXf res = eigen*eigenTranspose;
+  // Eigen::VectorXcd eivals = res.eigenvalues();
+  // double max = 0;
+  // for(int i = 0 ; i < eivals.size() ; i++){
+  //   double mymax = eivals[i];
+  //   if(mymax > max){
+  //     max = mymax;
+  //   }
+  // }
+  double x = eigen.squaredNorm();
+
+	return sqrt(x);
 }
 
 double L(cv::Mat input1, cv::Mat input2){
@@ -280,4 +331,20 @@ double L(cv::Mat input1, cv::Mat input2){
 		}
 	}
 	return product;
+}
+
+cv::Mat warp(cv::Mat mat, cv::Mat kernel){
+  cv::Mat result;
+  // mat.copyTo(result);
+  result = cv::Mat::zeros(mat.rows, mat.cols, CV_8UC1);
+  double limy = mat.rows;
+  double limx = mat.cols;
+  for(int i=0;i<limy;i++){
+    for(int j=0; j<limx;j++){
+      double posx = j + get_ij(kernel,i,j);
+      double posy = i + get_ij(kernel,i,j);
+      if(posx<=limx && posy<=limy)
+        result[i][j] = get_ij(mat,i,j); 
+    }
+  }
 }
