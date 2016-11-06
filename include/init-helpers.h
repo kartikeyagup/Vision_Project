@@ -10,10 +10,14 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <unordered_map>
 #include <string>
+#include <Eigen/Dense>
 
+// TODO KG Normalised part
 struct total_data {
   cv::Mat base_img;
+  Eigen::MatrixXf base_img_normalised;
   std::vector<cv::Mat> frames;
+  std::vector<Eigen::MatrixXf> normalised_frames;
 
   total_data() {};
   total_data(std::string inp_dir, int num_images) {
