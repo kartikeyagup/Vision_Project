@@ -79,6 +79,9 @@ bool Track(std::vector<cv::Point2f> &edge,
  * @param input all images
  * @param out_dir debug directory to dump images in
  */
-void initialise(total_data &input, std::string out_dir);
+void initialise(total_data &input, std::string out_dir, 
+  Eigen::MatrixXd &Io, Eigen::MatrixXd &A, Eigen::MatrixXd &Ib,
+  std::vector<Eigen::MatrixXd> &VoX, std::vector<Eigen::MatrixXd> &VoY,
+  std::vector<Eigen::MatrixXd> &VbX, std::vector<Eigen::MatrixXd> &VbY);
 
 #endif

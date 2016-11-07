@@ -15,7 +15,7 @@
 #include "common.h"
 
 Eigen::MatrixXd delta(Eigen::MatrixXd mat);
-
+int ceressolver();
 double L(Eigen::MatrixXd &input1, Eigen::MatrixXd &input2);
 Eigen::MatrixXd warp(Eigen::MatrixXd &m, Eigen::MatrixXd &mx, Eigen::MatrixXd &my);
 

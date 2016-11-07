@@ -51,7 +51,11 @@ bool comfun(const std::pair<cv::Point2i, int> &p1,const std::pair<cv::Point2i, i
   return (p1.second > p2.second);
 }
 
-void initialise(total_data &input, std::string out_dir) {
+void initialise(total_data &input, std::string out_dir, 
+  Eigen::MatrixXd &Io, Eigen::MatrixXd &A, Eigen::MatrixXd &Ib,
+  std::vector<Eigen::MatrixXd> &VoX, std::vector<Eigen::MatrixXd> &VoY,
+  std::vector<Eigen::MatrixXd> &VbX, std::vector<Eigen::MatrixXd> &VbY) {
+  
   cv::Mat baseEdges;
   cv::Canny(input.base_img, baseEdges, 25, 50);
   cv::imwrite(out_dir+"edges_base.png", baseEdges);

@@ -30,8 +30,8 @@ include_directories(${OpenCV_INCLUDE_DIRS}
                     ${CERES_INCLUDE_DIRS})
 
 add_library(helpers-cc src/init-helpers.cc
-                       src/optimization.cc)
-
+                       src/optimization.cc
+                       src/common.cc)
 
 add_executable(ceres_try scripts/ceres.cpp)
 add_executable(obsremove scripts/obsremove.cpp)

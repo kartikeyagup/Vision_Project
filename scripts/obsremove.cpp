@@ -10,8 +10,8 @@ DEFINE_int32(num_images, 5, "Number of images which need to be picked up");
 DEFINE_string(out_dir, "out_data/", "Directory to dump the results in.");
 DEFINE_bool(reflection, true, "Removing a reflection or occlusion");
 
-extern Eigen::MatrixXf Orig_Io, Orig_Ib, Orig_A;
-extern std::vector<motion_field> Orig_Vo, Orig_Vb;
+extern Eigen::MatrixXd Orig_Io, Orig_Ib, Orig_A;
+extern std::vector<Eigen::MatrixXd> Orig_VoX, Orig_VoY, Orig_VbX, Orig_VbY;
 
 extern int img_rows;
 extern int img_cols;
@@ -27,7 +27,9 @@ int main(int argc, char **argv)
   input = total_data(FLAGS_dirname, FLAGS_num_images);
   input.dump_data(FLAGS_out_dir);
   
-  initialise(input, FLAGS_out_dir);
+  initialise(input, FLAGS_out_dir, Orig_Io, Orig_A, Orig_Ib, Orig_VoX, Orig_VoY, Orig_VbX, Orig_VbY);
+
+  ceressolver();
 
   return 0;
 }

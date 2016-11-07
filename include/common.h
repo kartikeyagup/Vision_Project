@@ -3,20 +3,15 @@
 
 #include <vector>
 #include <utility>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <Eigen/Dense>
+#include <opencv2/core/core.hpp>
 
-struct motion_field {
-  std::vector<std::vector<std::pair<int, int> > > data;
+cv::Mat convertimg(Eigen::MatrixXd img);
 
-  int getx(int i, int j) {
-    // i row, j column
-    return data[i][j].second;
-  }
-
-  int gety(int i, int j) {
-    // i row, j column
-    return data[i][j].first;
-  }
-
-};
+// void printimage(cv::Mat input){
+//   cv::imwrite("build/output.png",input);
+// }
 
 #endif
