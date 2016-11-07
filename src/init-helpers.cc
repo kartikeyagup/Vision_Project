@@ -5,8 +5,8 @@ bool inBounds(cv::Point2f &p, cv::Mat &img) {
 }
 
 bool Track(std::vector<cv::Point2f> &edge, 
-    cv::Mat &img1, cv::Mat &img2,
-    int &dx, int &dy) {
+  cv::Mat &img1, cv::Mat &img2,
+  int &dx, int &dy) {
   int gridsize = 9;
   bool answer = false;
   float best = 10000;
@@ -47,6 +47,9 @@ bool Track(std::vector<cv::Point2f> &edge,
   return answer;
 }
 
+/**
+ * @brief Sorting comparator function
+ */
 bool comfun(const std::pair<cv::Point2i, int> &p1,const std::pair<cv::Point2i, int> &p2) {
   return (p1.second > p2.second);
 }
@@ -96,76 +99,68 @@ void initialise(total_data &input, std::string out_dir,
         all_edges[labels.at<int>(j,i)].push_back(cv::Point2f(i,j));
     }
   }
-  int tot(0), mt(0);
-  std::vector<cv::Point2f> initial_pts, final_pts, initial_pts_fg, final_pts_fg;
-  std::vector<std::pair<cv::Point2f, std::vector<cv::Point2f> > > Edges, Edges_2, Edges_bg, Edges_fg;
-  for (auto it: all_edges) {
-    tot++;
-    int dx, dy;
-    if (it.second.size() < 10) {
-      continue;
-    } 
-    if (Track(it.second, input.base_img, input.frames[0],  dx, dy)) {
-      mt++;
-      Edges.push_back(std::make_pair(cv::Point2f(dx, dy), it.second));
-      cv::Rect bb = cv::boundingRect(it.second);
-      for (auto it1: it.second) {
-        initial_pts.push_back(it1);
-        final_pts.push_back(it1 + cv::Point2f(dx, dy));
+
+  for (int fr=0; fr<input.frames.size(); fr++) {
+    int tot(0), mt(0);
+    std::vector<cv::Point2f> initial_pts, final_pts, initial_pts_fg, final_pts_fg;
+    std::vector<std::pair<cv::Point2f, std::vector<cv::Point2f> > > Edges, Edges_2, Edges_bg, Edges_fg;
+    for (auto it: all_edges) {
+      tot++;
+      int dx, dy;
+      if (it.second.size() < 10) {
+        continue;
+      } 
+      if (Track(it.second, input.base_img, input.frames[fr],  dx, dy)) {
+        mt++;
+        Edges.push_back(std::make_pair(cv::Point2f(dx, dy), it.second));
+        cv::Rect bb = cv::boundingRect(it.second);
+        for (auto it1: it.second) {
+          initial_pts.push_back(it1);
+          final_pts.push_back(it1 + cv::Point2f(dx, dy));
+        }
       }
     }
-  }
-  std::cout << "Matched " << mt << " out of " << tot << "\n";
+    std::cout << "Matched " << mt << " out of " << tot << "\n";
 
-  // std::vector<std::pair<cv::Point2i, int> > counts_pairs;
-  // for (auto it : counts_of_tr) {
-  //   counts_pairs.push_back(std::make_pair(it.first, it.second));
-  //   // std::cout << it.first << "\t" << it.second << "\n";
-  // }
-  // std::sort(counts_pairs.begin(), counts_pairs.end(), comfun);
-  // // for (auto it: counts_pairs) {
-  // //   std::cout << it.first << "\t" << it.second << "\n";
-  // // }
-
-  cv::Mat tr1, tr2;
-  std::vector<uchar> mask1, mask2;
-  std::vector<cv::Point2f> points_bg, points_fg;
-  assert(initial_pts.size() == final_pts.size());
-  tr1 = cv::findHomography(final_pts, initial_pts, CV_RANSAC, 3, mask1);
-  std::cout << tr1.rows << "\t" << tr1.cols << "\t" << mask1.size() << "\n" ;
-  int countbg(0), countfg(0);
-  for (int i=0; i<mask1.size(); i++) {
-    if (!(mask1[i])) {
-      initial_pts_fg.push_back(initial_pts[i]);
-      final_pts_fg.push_back(final_pts[i]);
-    } else {
-      points_bg.push_back(initial_pts[i]);
-      countbg++;
+    cv::Mat tr1, tr2;
+    std::vector<uchar> mask1, mask2;
+    std::vector<cv::Point2f> points_bg, points_fg;
+    assert(initial_pts.size() == final_pts.size());
+    tr1 = cv::findHomography(final_pts, initial_pts, CV_RANSAC, 3, mask1);
+    std::cout << tr1.rows << "\t" << tr1.cols << "\t" << mask1.size() << "\n" ;
+    int countbg(0), countfg(0);
+    for (int i=0; i<mask1.size(); i++) {
+      if (!(mask1[i])) {
+        initial_pts_fg.push_back(initial_pts[i]);
+        final_pts_fg.push_back(final_pts[i]);
+      } else {
+        points_bg.push_back(initial_pts[i]);
+        countbg++;
+      }
     }
-  }
-  std::cout << countbg << " inliers in bg\n";
-  assert(initial_pts_fg.size() == final_pts_fg.size());
-  tr2 = cv::findHomography(final_pts_fg, initial_pts_fg, CV_RANSAC, 3, mask2);
-  std::cout << tr2.rows << "\t" << tr2.cols << "\t" << mask2.size() << "\n" ;
-  assert(mask2.size() == initial_pts_fg.size());
-  for (int i=0; i<mask2.size(); i++) {
-    if (mask2[i]) {
-      points_fg.push_back(initial_pts_fg[i]);
-      countfg++;
+    std::cout << countbg << " inliers in bg\n";
+    assert(initial_pts_fg.size() == final_pts_fg.size());
+    tr2 = cv::findHomography(final_pts_fg, initial_pts_fg, CV_RANSAC, 3, mask2);
+    std::cout << tr2.rows << "\t" << tr2.cols << "\t" << mask2.size() << "\n" ;
+    assert(mask2.size() == initial_pts_fg.size());
+    for (int i=0; i<mask2.size(); i++) {
+      if (mask2[i]) {
+        points_fg.push_back(initial_pts_fg[i]);
+        countfg++;
+      }
     }
-  }
-  cv::Mat bg(baseEdges.size(), CV_8UC3);
-  cv::Mat fg(baseEdges.size(), CV_8UC3);
-  for (auto it: points_bg) {
-      cv::circle(bg, it, 2, cv::Scalar(0,0,255), -1);
-  }
+    cv::Mat bg(baseEdges.size(), CV_8UC3);
+    cv::Mat fg(baseEdges.size(), CV_8UC3);
+    for (auto it: points_bg) {
+        cv::circle(bg, it, 2, cv::Scalar(0,0,255), -1);
+    }
 
-  for (auto it: points_fg) {
-      cv::circle(fg, it, 2, cv::Scalar(0,0,255), -1);
+    for (auto it: points_fg) {
+        cv::circle(fg, it, 2, cv::Scalar(0,0,255), -1);
+    }
+
+    cv::imwrite(out_dir + "edges_bg.png", bg);
+    cv::imwrite(out_dir + "edges_fg.png", fg);
+    std::cout << countfg << " inliers in fg\n";
   }
-
-  cv::imwrite(out_dir + "edges_bg.png", bg);
-  cv::imwrite(out_dir + "edges_fg.png", fg);
-
-  std::cout << countfg << " inliers in fg\n";
 }
