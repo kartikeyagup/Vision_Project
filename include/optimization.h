@@ -5,6 +5,7 @@
 #include <vector>
 #include "init-helpers.h"
 #include "ceres/ceres.h"
+#include "ceres/dynamic_autodiff_cost_function.h"
 #include "gflags/gflags.h"
 #include "glog/logging.h"
 #include <opencv2/core/core.hpp>
@@ -13,9 +14,9 @@
 #include <cmath>
 #include "common.h"
 
-Eigen::MatrixXf delta(Eigen::MatrixXf mat);
+Eigen::MatrixXd delta(Eigen::MatrixXd mat);
 
-double L(Eigen::MatrixXf &input1, Eigen::MatrixXf &input2);
-Eigen::MatrixXf warp(Eigen::MatrixXf &m, motion_field & motion);
+double L(Eigen::MatrixXd &input1, Eigen::MatrixXd &input2);
+Eigen::MatrixXd warp(Eigen::MatrixXd &m, Eigen::MatrixXd &mx, Eigen::MatrixXd &my);
 
 #endif

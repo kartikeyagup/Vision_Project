@@ -10,10 +10,8 @@ DEFINE_int32(num_images, 5, "Number of images which need to be picked up");
 DEFINE_string(out_dir, "out_data/", "Directory to dump the results in.");
 DEFINE_bool(reflection, true, "Removing a reflection or occlusion");
 
-extern Eigen::MatrixXf Io;
-extern Eigen::MatrixXf Ib;
-extern Eigen::MatrixXf A;
-extern std::vector<motion_field> Vo, Vb;
+extern Eigen::MatrixXf Orig_Io, Orig_Ib, Orig_A;
+extern std::vector<motion_field> Orig_Vo, Orig_Vb;
 
 extern int img_rows;
 extern int img_cols;
