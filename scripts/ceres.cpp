@@ -46,10 +46,12 @@
 #include <vector>
 #include "ceres/ceres.h"
 #include "ceres/dynamic_autodiff_cost_function.h"
+// #include "ceres/dynamic_numericdiff_cost_function.h"
 #include "gflags/gflags.h"
 #include "glog/logging.h"
 using ceres::AutoDiffCostFunction;
 using ceres::DynamicAutoDiffCostFunction;
+using ceres::DynamicNumericDiffCostFunction;
 using ceres::CostFunction;
 using ceres::Problem;
 using ceres::Solver;
@@ -199,6 +201,21 @@ struct dynamic_eigen_4 {
   }
 };
 
+
+struct num_dynamic_eigen_4 {
+  bool operator()(double const* const* parameters, 
+                  double* residual) const {
+ 
+    Eigen::Matrix2d io = Eigen::Map<Eigen::Matrix2d>((double*) parameters[0], 2, 2);
+ 
+    residual[0] = ((sqrt(10.0) * io(0,0) - io(1,1))*(sqrt(10.0) * io(0,0) - io(1,1)));
+    residual[0] += (io(0,0) + 10*io(1,0))*(io(0,0) + 10*io(1,0));
+    residual[0] += (io(1,0) - 2*io(0,1))*(io(1,0) - 2*io(0,1));
+    residual[0] += sqrt(5)*(io(0,1) - io(1,1))*sqrt(5)*(io(0,1) - io(1,1));
+    return true;
+  }
+};
+
 DEFINE_string(minimizer, "trust_region",
               "Minimizer type to use, choices are: line_search & trust_region");
 int main(int argc, char** argv) {
@@ -206,7 +223,7 @@ int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
   // double x1[2] =  {3,0};
   // Eigen::Vector2d t;
-  Eigen::Matrix2d matrix;
+  Eigen::Matrix2d matrix;;
   double x1 = 3;
   double x2 = -1;
   double x3 = 0;
@@ -224,21 +241,31 @@ int main(int argc, char** argv) {
   // Add residual terms to the problem using the using the autodiff
   // wrapper to get the derivatives automatically. The parameters, x1 through
   // x4, are modified in place.
-  DynamicAutoDiffCostFunction<dynamic_eigen_4> c1(new dynamic_eigen_4());
-  c1.SetNumResiduals(1);
-  std::vector<double*> p1;
-  for(int i=0 ; i < matrix.rows() ; i++){
-    for(int j=0 ; j < matrix.cols() ; j++){
-      c1.AddParameterBlock(1);
-      p1.push_back(&matrix(i,j));
-    }
-  }
+  // DynamicAutoDiffCostFunction<dynamic_eigen_4> c1(new dynamic_eigen_4());
+  DynamicNumericDiffCostFunction<num_dynamic_eigen_4>* c1 = new 
+    DynamicNumericDiffCostFunction<num_dynamic_eigen_4> (new num_dynamic_eigen_4());
+  c1->SetNumResiduals(1);
+  std::vector<double*> p1;// = new std::vector<double*>[1];;
+  double *dat = matrix.data();
+  std::cout << dat[0] << "\n";
+  std::cout << dat[1] << "\n";
+  std::cout << dat[2] << "\n";
+  std::cout << dat[3] << "\n";
+  // assert(false);
+  c1->AddParameterBlock(4);
+  p1.push_back(dat);
+  // for(int i=0 ; i < matrix.rows() ; i++){
+  //   for(int j=0 ; j < matrix.cols() ; j++){
+  //     c1.AddParameterBlock(1);
+  //     p1.push_back(&matrix(i,j));
+  //   }
+  // }
   // c1.AddParameterBlock(1);
   // c1.AddParameterBlock(1);
   // c1.AddParameterBlock(1);
   // c1.AddParameterBlock(4);  
   // p1.push_back(matrix.data());
-  problem.AddResidualBlock(&c1, NULL, p1);
+  problem.AddResidualBlock(c1, NULL, p1);
 
   // DynamicAutoDiffCostFunction<F1_D> c1(new F1_D());
   // c1.SetNumResiduals(1);
@@ -299,9 +326,10 @@ int main(int argc, char** argv) {
   options.max_num_iterations = 1000;
   options.num_threads = 8;
   options.num_linear_solver_threads = 8;
-  options.preconditioner_type = ceres::SCHUR_JACOBI;
-  options.use_inner_iterations = true;
-  options.linear_solver_type = ceres::ITERATIVE_SCHUR;
+  options.preconditioner_type = ceres::IDENTITY;
+  options.use_inner_iterations = false;
+  options.use_explicit_schur_complement = true; 
+  options.linear_solver_type = ceres::CGNR;
   options.minimizer_progress_to_stdout = true;
   options.use_nonmonotonic_steps = true;
   std::cout << "Initial x1 = " << matrix << std::endl;
