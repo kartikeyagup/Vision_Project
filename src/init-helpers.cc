@@ -58,7 +58,33 @@ void initialise(total_data &input, std::string out_dir,
   Eigen::MatrixXd &Io, Eigen::MatrixXd &A, Eigen::MatrixXd &Ib,
   std::vector<Eigen::MatrixXd> &VoX, std::vector<Eigen::MatrixXd> &VoY,
   std::vector<Eigen::MatrixXd> &VbX, std::vector<Eigen::MatrixXd> &VbY) {
-  
+  // Eigen::MatrixXd zeros = ;
+  VoX.clear();
+  VoY.clear();
+  VbX.clear();
+  VbY.clear();
+  VoX.resize(input.frames.size());
+  VoY.resize(input.frames.size());
+  VbX.resize(input.frames.size());
+  VbY.resize(input.frames.size());
+  for(int i=0 ; i<input.frames.size();i++){
+    VoX[i] = Eigen::MatrixXd(input.base_img.rows, input.base_img.cols);
+    VoY[i] = Eigen::MatrixXd(input.base_img.rows, input.base_img.cols);
+    VbX[i] = Eigen::MatrixXd(input.base_img.rows, input.base_img.cols);
+    VbY[i] = Eigen::MatrixXd(input.base_img.rows, input.base_img.cols);
+  }
+  A = Eigen::MatrixXd(input.base_img.rows, input.base_img.cols);
+  Io = Eigen::MatrixXd(input.base_img.rows, input.base_img.cols);
+  Ib = Eigen::MatrixXd(input.base_img.rows, input.base_img.cols);
+  for(int i = 0; i<input.base_img.rows;i++){
+    for(int j=0;j<input.base_img.cols;j++){
+      A(i,j) = 0.1;
+      // double x = 
+      Io(i,j) = ((double) rand() / (RAND_MAX));
+      Ib(i,j) = ((double) rand() / (RAND_MAX));
+    }
+  }
+
   cv::Mat baseEdges;
   cv::Canny(input.base_img, baseEdges, 25, 50);
   cv::imwrite(out_dir+"edges_base.png", baseEdges);
@@ -159,8 +185,53 @@ void initialise(total_data &input, std::string out_dir,
         cv::circle(fg, it, 2, cv::Scalar(0,0,255), -1);
     }
 
+    std::cout << "Foming 1\n";
+    form_motion_field(input.base_img.rows, input.base_img.cols, tr1, VbX[fr], VbY[fr]);
+    std::cout << "Foming 2\n";
+    form_motion_field(input.base_img.rows, input.base_img.cols, tr2, VoX[fr], VoY[fr]);
+    
     cv::imwrite(out_dir + "edges_bg.png", bg);
     cv::imwrite(out_dir + "edges_fg.png", fg);
     std::cout << countfg << " inliers in fg\n";
   }
+  // TODO: Fill Io, A, Ib
+  input.base_img_normalised = normalize(input.base_img);
+  for (auto it: input.frames) {
+    input.normalised_frames.push_back(normalize(it));
+  }
+}
+
+void form_motion_field(int rows, int cols, cv::Mat homo, Eigen::MatrixXd &mx, Eigen::MatrixXd &my){
+  // Eigen::Map<Matrix3d> homography(homo.data());
+  Eigen::Matrix3d homography(3,3);
+  for(int i=0; i<3; i++){
+    for(int j=0;j<3;j++){
+      homography(i,j) = (double)homo.at<uchar>(i,j);
+    }
+  }
+  
+  for(int i = 0; i<rows;i++){
+    for(int j=0; j<cols;j++){
+      Eigen::MatrixXd point(3,1);
+      point << j,i,1;
+      Eigen::MatrixXd ans = homography * point;
+      double val = ans(2,0);
+      ans(0,0) = ans(0,0)/val;
+      ans(1,0) = ans(1,0)/val;
+      // if(ans(0,0) < cols && ans(1,0) < rows){
+      mx(i,j) = ans(0,0) - j;
+      my(i,j) = ans(1,0) - i;
+      // }
+    }
+  }
+}
+  
+Eigen::MatrixXd normalize(cv::Mat m) {
+  Eigen::MatrixXd answer(m.rows,m.cols);
+  for(int i=0;i<m.rows;i++){
+    for(int j=0;j<m.cols;j++){
+      answer(i,j) = m.at<uchar>(i,j)/255;
+    }
+  }
+  return answer;
 }

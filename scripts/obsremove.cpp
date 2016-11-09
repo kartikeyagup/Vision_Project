@@ -28,7 +28,11 @@ int main(int argc, char **argv)
   input.dump_data(FLAGS_out_dir);
   
   initialise(input, FLAGS_out_dir, Orig_Io, Orig_A, Orig_Ib, Orig_VoX, Orig_VoY, Orig_VbX, Orig_VbY);
-
+  // std::cout<<Orig_Io<<"\n";
+  img_rows = Orig_Io.rows();
+  img_cols = Orig_Io.cols();
+  num_images = input.frames.size();
+  num_images -= 1;
   ceressolver();
 
   return 0;

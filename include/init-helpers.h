@@ -84,4 +84,7 @@ void initialise(total_data &input, std::string out_dir,
   std::vector<Eigen::MatrixXd> &VoX, std::vector<Eigen::MatrixXd> &VoY,
   std::vector<Eigen::MatrixXd> &VbX, std::vector<Eigen::MatrixXd> &VbY);
 
+void form_motion_field(int rows, int cols, cv::Mat homo, Eigen::MatrixXd &mx, Eigen::MatrixXd &my);
+Eigen::MatrixXd normalize(cv::Mat m); 
+
 #endif
