@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <iostream>
+#include <opencv2/opencv.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -10,6 +11,7 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <unordered_map>
 #include <string>
+#include <limits.h>
 
 struct total_data {
   cv::Mat base_img;
@@ -66,7 +68,7 @@ bool inBounds(cv::Point2f &p, cv::Mat &img);
  * @return true or false if the edge was matched in 2nd image
  *          if true, then dx and dy are the displacements
  */
-bool Track(std::vector<cv::Point2f> &edge, 
+double Track(std::vector<cv::Point2f> &edge, 
   cv::Mat &img1, cv::Mat &img2,
   int &dx, int &dy);
 

@@ -4,11 +4,11 @@ bool inBounds(cv::Point2f &p, cv::Mat &img) {
   return ((p.x < img.cols-1) && (p.y < img.rows-1) && (p.x > 0) && (p.y > 0));
 }
 
-bool Track(std::vector<cv::Point2f> &edge, 
+double Track(std::vector<cv::Point2f> &edge, 
     cv::Mat &img1, cv::Mat &img2,
-    int &dx, int &dy) {
-  int gridsize = 9;
-  bool answer = false;
+    int &dx, int &dy, cv::Mat &grad1, cv::Mat &grad2) {
+  int gridsize = 150;
+  double answer = 10000000;
   float best = 10000;
   for (int i=-gridsize; i<gridsize; i++) {
     for (int j=-gridsize; j<gridsize; j++) {
@@ -20,9 +20,14 @@ bool Track(std::vector<cv::Point2f> &edge,
         if (inBounds(pt, img2)) {
           cv::Vec3b c1 = img1.at<cv::Vec3b>(edge[k]);
           cv::Vec3b c2 = img2.at<cv::Vec3b>(pt);
-          tot += ((int) c2[0])-((int) c1[0]);
-          tot += ((int) c2[1])-((int) c1[1]);
-          tot += ((int) c2[2])-((int) c1[2]);
+          cv::Vec3b c1_grad = grad1.at<cv::Vec3b>(edge[k]);
+          cv::Vec3b c2_grad = grad2.at<cv::Vec3b>(pt);
+          tot += fabs(((int) c2[0])-((int) c1[0]));
+          tot += fabs(((int) c2[1])-((int) c1[1]));
+          tot += fabs(((int) c2[2])-((int) c1[2]));
+          tot += 0.01*fabs(((int) c2_grad[0])-((int) c1_grad[0]));
+          tot += 0.01*fabs(((int) c2_grad[1])-((int) c1_grad[1]));
+          tot += 0.01*fabs(((int) c2_grad[2])-((int) c1_grad[2]));
         } else {
           sofar = false;
           break;
@@ -31,6 +36,7 @@ bool Track(std::vector<cv::Point2f> &edge,
       if (sofar) {
         tot /= 3.0;
         tot /= edge.size();
+        tot /= 255;
         tot = fabs(tot);
 
         if (tot < best) {
@@ -41,8 +47,9 @@ bool Track(std::vector<cv::Point2f> &edge,
       }
     }
   }
-  if (best < 1) {
-    answer = true;
+  if (best < 0.04) {
+    std::cout << "Edge with " << edge.size() << " tracked with error" << best << "\n";
+    answer = best;
   }
   return answer;
 }
@@ -53,7 +60,12 @@ bool comfun(const std::pair<cv::Point2i, int> &p1,const std::pair<cv::Point2i, i
 
 void initialise(total_data &input, std::string out_dir) {
   cv::Mat baseEdges;
+  cv::Mat oneEdges;
   cv::Canny(input.base_img, baseEdges, 25, 50);
+  cv::Canny(input.frames[0], oneEdges, 25, 50);
+  //cv::Mat grayinput(input.base_img.rows, input.base_img.cols, CV_8UC1);
+  //cv::cvtColor(input.base_img, grayinput, CV_BGR2GRAY);
+  //cv::Laplacian(input.base_img, baseEdges, -1, 5, 1, 0, cv::BORDER_DEFAULT);
   cv::imwrite(out_dir+"edges_base.png", baseEdges);
 
   int posx, posy;
@@ -82,6 +94,9 @@ void initialise(total_data &input, std::string out_dir) {
       segments.at<cv::Vec3b>(i, j) = colors[labels.at<int>(i,j)];
     }
   }
+  //cv::imwrite(out_dir+"pitjaoge.png", labels);
+  cv::imwrite(out_dir+"edge_1.png", oneEdges);
+
   cv::imwrite(out_dir+"labels.png", segments);
   std::cout << "Labels " << nlabels << "\n";
 
@@ -93,25 +108,90 @@ void initialise(total_data &input, std::string out_dir) {
     }
   }
   int tot(0), mt(0);
+
+  cv::Mat trace_baseimg_firstimg(baseEdges.size(), CV_32S);
+  input.base_img.copyTo(trace_baseimg_firstimg);
+
   std::vector<cv::Point2f> initial_pts, final_pts, initial_pts_fg, final_pts_fg;
   std::vector<std::pair<cv::Point2f, std::vector<cv::Point2f> > > Edges, Edges_2, Edges_bg, Edges_fg;
+
   for (auto it: all_edges) {
     tot++;
     int dx, dy;
-    if (it.second.size() < 10) {
+    if (it.second.size() < 100) {
       continue;
     } 
-    if (Track(it.second, input.base_img, input.frames[0],  dx, dy)) {
-      mt++;
-      Edges.push_back(std::make_pair(cv::Point2f(dx, dy), it.second));
-      cv::Rect bb = cv::boundingRect(it.second);
-      for (auto it1: it.second) {
-        initial_pts.push_back(it1);
-        final_pts.push_back(it1 + cv::Point2f(dx, dy));
+ //   double trackerror = Track(it.second, input.base_img, input.frames[0],  dx, dy, baseEdges, oneEdges);
+    /////////////////////////////////////////////////////
+    std::vector<cv::Point2f> cornersA; 
+    std::vector<cv::Point2f> cornersB; 
+    std::vector<cv::Point2f> cornersGF; 
+
+    goodFeaturesToTrack( baseEdges,cornersGF,50000,0.01,10.0,cv::Mat(),3,0,0.04);
+
+    for(auto it3 = cornersGF.begin(); it3 != cornersGF.end(); it3++)
+    {
+      if(find(it.second.begin(), it.second.end(), *it3) != it.second.end())
+        cornersA.push_back(*it3);
+    }
+
+    std::cout << "Pit jaoge" << cornersA.size() << std::endl;
+
+    std::vector<uchar> features_found; 
+    std::vector<float> feature_errors; 
+
+    if(cornersA.size() > 0)
+      calcOpticalFlowPyrLK( baseEdges, oneEdges, cornersA, cornersB, features_found, feature_errors ,
+         cv::Size( 31, 31 ), 5,
+          cvTermCriteria( CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, 0.3 ), 0 );
+
+
+
+    //////////////////////////////////////////////////////
+    //std::cout << trackerror << "\n";
+
+    for(int i = 0; i < features_found.size(); i++)
+    {
+      if(features_found[i] == true)
+      {
+        mt++;
+        Edges.push_back(std::make_pair(cv::Point2f(dx, dy), it.second));
+        int i=0;
+        for (auto it1: it.second) {
+          initial_pts.push_back(it1);
+          final_pts.push_back(it1 + cv::Point2f(dx, dy));
+          i++;
+          if(i%20 == 0)
+          {
+              arrowedLine(trace_baseimg_firstimg, it1, it1+cv::Point2f(dx, dy),cv::Vec3b(0,0255-2550*feature_errors[i],2550*feature_errors[i]));
+            circle(trace_baseimg_firstimg, it1, 5, cv::Vec3b(0,14,10));  
+          }
+          
+        }
       }
     }
+
+    // if ( trackerror != 10000000 ) {
+    //   mt++;
+    //   Edges.push_back(std::make_pair(cv::Point2f(dx, dy), it.second));
+    //   cv::Rect bb = cv::boundingRect(it.second);
+    //   int i=0;
+    //   for (auto it1: it.second) {
+    //     initial_pts.push_back(it1);
+    //     final_pts.push_back(it1 + cv::Point2f(dx, dy));
+    //     i++;
+    //     if(i%20 == 0)
+    //     {
+    //       arrowedLine(trace_baseimg_firstimg, it1, it1+cv::Point2f(dx, dy),cv::Vec3b(0,0255-2550*trackerror,2550*trackerror));
+    //       circle(trace_baseimg_firstimg, it1, 5, cv::Vec3b(0,14,10));  
+    //     }
+        
+    //   }
+    // }
   }
   std::cout << "Matched " << mt << " out of " << tot << "\n";
+
+  cv::imwrite(out_dir+"track.png", trace_baseimg_firstimg);
 
   // std::vector<std::pair<cv::Point2i, int> > counts_pairs;
   // for (auto it : counts_of_tr) {
