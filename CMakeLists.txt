@@ -29,17 +29,20 @@ include_directories(${OpenCV_INCLUDE_DIRS}
                     include
                     ${CERES_INCLUDE_DIRS})
 
-# add_executable(ceres-test src/ceres_try.cc)
+add_library(helpers-cc src/init-helpers.cc
+                       src/optimization.cc
+                       src/common.cc)
 
-add_library(helpers-cc src/init-helpers.cc)
-
+add_executable(ceres_try scripts/ceres.cpp)
 add_executable(obsremove scripts/obsremove.cpp)
 
 target_link_libraries(obsremove ${OpenCV_LIBS}
                                 helpers-cc
                                 gflags
+                                glog
+                                ${CERES_LIBRARIES}
                                 opencv_calib3d)
 
-# target_link_libraries(ceres-test glog
-# 				 gflags
-#                                  ${CERES_LIBRARIES})
+target_link_libraries(ceres_try ${CERES_LIBRARIES}
+                                gflags
+                                glog)
