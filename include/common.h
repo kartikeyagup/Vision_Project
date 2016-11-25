@@ -14,4 +14,11 @@ cv::Mat convertimg(Eigen::MatrixXd img);
 //   cv::imwrite("build/output.png",input);
 // }
 
+Eigen::MatrixXd DownSampleMat(Eigen::MatrixXd mt, int factor);
+
+Eigen::MatrixXd UpSampleMat(Eigen::MatrixXd mt, int factor);
+
+Eigen::MatrixXd DownSampleFromCvMat(cv::Mat img, int cls, int rws);
+
+Eigen::MatrixXd normalize(cv::Mat inp);
 #endif
