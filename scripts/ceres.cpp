@@ -64,13 +64,14 @@ struct num_dynamic_eigen_4 {
   bool operator()(double const* const* parameters, 
                   double* residual) const {
  
-    Eigen::MatrixXd io = Eigen::Map<Eigen::MatrixXd>((double*) parameters[0], 2, 2);
+    Eigen::MatrixXd io = Eigen::Map<Eigen::MatrixXd>((double*) parameters[0], 100, 100);
     
-    // residual[0] = ((sqrt(10.0) * io(0,0) - io(1,1))*(sqrt(10.0) * io(0,0) - io(1,1)));
-    // residual[0] += (io(0,0) + 10*io(1,0))*(io(0,0) + 10*io(1,0));
-    // residual[0] += (io(1,0) - 2*io(0,1))*(io(1,0) - 2*io(0,1));
-    // residual[0] += sqrt(5)*(io(0,1) - io(1,1))*sqrt(5)*(io(0,1) - io(1,1));
+    residual[0] = ((sqrt(10.0) * io(0,0) - io(1,1))*(sqrt(10.0) * io(0,0) - io(1,1)));
+    residual[0] += (io(0,0) + 10*io(1,0))*(io(0,0) + 10*io(1,0));
+    residual[0] += (io(1,0) - 2*io(0,1))*(io(1,0) - 2*io(0,1));
+    residual[0] += sqrt(5)*(io(0,1) - io(1,1))*sqrt(5)*(io(0,1) - io(1,1));
     // // residual[0] += delta(io).norm();
+    std::cout << "Residual " << residual[0] << "\n";
     // residual[0] += io.lpNorm<1>();
     return true;
   }
@@ -83,13 +84,18 @@ int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
   // double x1[2] =  {3,0};
   // Eigen::Vector2d t;
-  Eigen::Matrix2d matrix;;
+  Eigen::MatrixXd matrix(100,100);
   double x1 = 3;
   double x2 = -1;
   double x3 = 0;
   double x4 = 2;
-  matrix << x1 ,x2,
-            x3, x4;
+  matrix(0,0) = x1;
+  matrix(0,1) = x2;
+  matrix(1,0) = x3;
+  matrix(1,1) = x4;
+
+  // matrix << x1 ,x2,
+  //           x3, x4;
   Problem problem;
   // double * X = matrix.data();
   DynamicNumericDiffCostFunction<num_dynamic_eigen_4>* c1 = new 
@@ -102,7 +108,7 @@ int main(int argc, char** argv) {
   std::cout << dat[2] << "\n";
   std::cout << dat[3] << "\n";
 
-  c1->AddParameterBlock(4);
+  c1->AddParameterBlock(100*100);
   p1.push_back(dat);
   problem.AddResidualBlock(c1, NULL, p1);
 

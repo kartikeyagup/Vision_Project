@@ -30,7 +30,7 @@ int main(int argc, char **argv)
   initialise(input, FLAGS_out_dir, Orig_Io, Orig_A, Orig_Ib, Orig_VoX, Orig_VoY, Orig_VbX, Orig_VbY);
   img_rows = Orig_Io.rows();
   img_cols = Orig_Io.cols();
-  num_images = input.frames.size() - 1;
+  num_images = input.frames.size();
 
   save_normalised(Orig_Io, FLAGS_out_dir+"origio.png");
   save_normalised(Orig_Ib, FLAGS_out_dir+"origib.png");

@@ -422,7 +422,11 @@ Eigen::MatrixXd normalize(cv::Mat inp) {
   Eigen::MatrixXd answer(m.rows,m.cols);
   for(int i=0;i<m.rows;i++){
     for(int j=0;j<m.cols;j++){
-      answer(i,j) = ((int) m.at<uchar>(i,j))/255.0;
+      answer(i,j) = ((int) (inp.at<cv::Vec3b>(i, j)[0])) + 
+                    ((int) (inp.at<cv::Vec3b>(i, j)[1])) +
+                    ((int) (inp.at<cv::Vec3b>(i, j)[2]));
+      answer(i,j) /= (3*255.0);
+      // answer(i,j) = ((int) m.at<uchar>(i,j))/255.0;
     }
   }
   return answer;
@@ -432,6 +436,8 @@ void save_normalised(Eigen::MatrixXd &img, std::string path) {
   cv::Mat conv_img(img.rows(), img.cols(), CV_8UC1);
   for (int i=0; i<img.rows(); i++) {
     for (int j=0; j<img.cols(); j++) {
+      assert(img(i,j) <= 1.0000001);
+      assert(img(i,j) >= -2.0000001);
       conv_img.at<uchar>(i, j) = floor(img(i,j)*255);
     }
   }
