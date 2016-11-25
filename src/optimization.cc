@@ -65,7 +65,7 @@ int num_images;
 
 total_data input;
 
-DEFINE_string(minimizer, "line_search",
+DEFINE_string(minimizer, "trust_region",
               "Minimizer type to use, choices are: line_search & trust_region");
  
 struct dynamic_data_term {
@@ -102,7 +102,7 @@ struct dynamic_data_term {
     // residual[0] +=  (param1 * ((double) delta(a).norm()));
     // residual[0] += (param2 * ((double) (L1Norm(delta(io)) + L1Norm(delta(ib)))));
     // residual[0] += (param3 * (double) (L(io,ib)));
-    std::cout << "\rNum iter "<< numiter <<" Residual is " << residual[0] << " ,,,,,,,," << std::flush;
+    // std::cout << "\rNum iter "<< numiter <<" Residual is " << residual[0] << " ,,,,,,,," << std::flush;
     numiter++;
     // std::cout << io.norm() <<std::endl;
     return true;
@@ -133,7 +133,7 @@ struct dynamic_norm_l1_ioib {
 struct dynamic_l {
   bool operator()(double const* const* parameters,
                                         double* residual) const {
-    double param = 100;
+    double param = 1000;
     Eigen::MatrixXd io = Eigen::Map<Eigen::MatrixXd>((double*) parameters[0], img_rows, img_cols);
     Eigen::MatrixXd ib = Eigen::Map<Eigen::MatrixXd>((double*) parameters[1], img_rows, img_cols);
     residual[0] = (param * (double) (L(io,ib)));
@@ -148,9 +148,6 @@ private:
 public:
   bool operator()(double const* const* parameters,
                                         double* residual) const {
-    // residual[0] = T(0.0);
-    double param1 = 10;
-
     Eigen::MatrixXd vox = Eigen::Map<Eigen::MatrixXd>((double*) parameters[0], img_rows, img_cols);
     Eigen::MatrixXd voy = Eigen::Map<Eigen::MatrixXd>((double*) parameters[1], img_rows, img_cols);
     Eigen::MatrixXd vbx = Eigen::Map<Eigen::MatrixXd>((double*) parameters[2], img_rows, img_cols);
@@ -161,8 +158,7 @@ public:
     Eigen::MatrixXd iavo = warp(Orig_A, vox, voy);
     Eigen::MatrixXd iavoibvb = iavo.cwiseProduct(ibvb);
     residual[0] = (L1Norm(input.normalised_frames[img_id] - iovo - iavoibvb));
-    residual[0] = residual[0] + param1 * ((L1Norm(delta(vox) + delta(voy))/2) + (L1Norm(delta(vbx) + delta(vby))/2));
-    std::cout << "\rResidual is " << residual[0] << " ,,,,,,,,,,,,,,,,,, " << std::flush;
+    // std::cout << "\rResidual is " << residual[0] << " ,,,,,,,,,,,,,,,,,, " << std::flush;
     return true;
   }
 

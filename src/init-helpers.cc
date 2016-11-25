@@ -76,7 +76,7 @@ void GenerateWarped(cv::Mat &input_img, cv::Mat &target, Eigen::MatrixXd &VoX, E
   // Fill the target image based on the Vox and Voy
   for (int i=0; i<input_img.rows;  i++) {
     for (int j=0; j<input_img.cols; j++) {
-      cv::Point2f newp(j + VoX(i, j), i + VoY(i, j));
+      cv::Point2f newp(j - VoX(i, j), i - VoY(i, j));
       if (inBounds(newp, input_img)) {
         target.at<cv::Vec3b>(newp) = input_img.at<cv::Vec3b>(i, j);
       }
@@ -178,10 +178,9 @@ void initialise(total_data &input, std::string out_dir,
     std::vector<uchar> mask1, mask2;
     std::vector<cv::Point2f> points_bg, points_fg;
     assert(initial_pts.size() == final_pts.size());
-    tr1 = cv::findHomography(final_pts, initial_pts, CV_RANSAC, 3, mask1);
+    tr1 = cv::findHomography(initial_pts, final_pts, CV_RANSAC, 3, mask1);
     FillVXY(tr1, VbX[fr], VbY[fr]);
     GenerateWarped(input.frames[fr], warped[fr], VbX[fr], VbY[fr]);
-
 
     cv::imwrite(out_dir + std::to_string(fr) + "_warped.png", warped[fr]);
     std::cout << tr1.rows << "\t" << tr1.cols << "\t" << mask1.size() << "\n" ;
@@ -198,7 +197,7 @@ void initialise(total_data &input, std::string out_dir,
 
     std::cout << countbg << " inliers in bg\n";
     assert(initial_pts_fg.size() == final_pts_fg.size());
-    tr2 = cv::findHomography(final_pts_fg, initial_pts_fg, CV_RANSAC, 3, mask2);
+    tr2 = cv::findHomography(initial_pts_fg, final_pts_fg, CV_RANSAC, 3, mask2);
     FillVXY(tr2, VoX[fr], VoY[fr]);
     std::cout << tr2.rows << "\t" << tr2.cols << "\t" << mask2.size() << "\n" ;
     assert(mask2.size() == initial_pts_fg.size());
@@ -238,9 +237,9 @@ void initialise(total_data &input, std::string out_dir,
                        ((int) (input.base_img.at<cv::Vec3b>(i, j)[2]));
       float bg = minsofar/(3*255.0);
       for (int k=0; k<input.frames.size(); k++) {
-        int presentcol = ((int) (input.frames[k].at<cv::Vec3b>(i, j)[0])) + 
-                         ((int) (input.frames[k].at<cv::Vec3b>(i, j)[1])) +
-                         ((int) (input.frames[k].at<cv::Vec3b>(i, j)[2]));
+        int presentcol = ((int) (warped[k].at<cv::Vec3b>(i, j)[0])) + 
+                         ((int) (warped[k].at<cv::Vec3b>(i, j)[1])) +
+                         ((int) (warped[k].at<cv::Vec3b>(i, j)[2]));
         if (presentcol>0 && (presentcol<minsofar)) {
           minsofar = presentcol;
         }
@@ -255,31 +254,6 @@ void initialise(total_data &input, std::string out_dir,
 
 }
 
-void form_motion_field(int rows, int cols, cv::Mat homo, Eigen::MatrixXd &mx, Eigen::MatrixXd &my){
-  // Eigen::Map<Matrix3d> homography(homo.data());
-  Eigen::Matrix3d homography(3,3);
-  for(int i=0; i<3; i++){
-    for(int j=0;j<3;j++){
-      homography(i,j) = (double)homo.at<uchar>(i,j);
-    }
-  }
-  
-  for(int i = 0; i<rows;i++){
-    for(int j=0; j<cols;j++){
-      Eigen::MatrixXd point(3,1);
-      point << j,i,1;
-      Eigen::MatrixXd ans = homography * point;
-      double val = ans(2,0);
-      ans(0,0) = ans(0,0)/val;
-      ans(1,0) = ans(1,0)/val;
-      // if(ans(0,0) < cols && ans(1,0) < rows){
-      mx(i,j) = ans(0,0) - j;
-      my(i,j) = ans(1,0) - i;
-      // }
-    }
-  }
-}
-  
 void save_normalised(Eigen::MatrixXd &img, std::string path) {
   cv::Mat conv_img(img.rows(), img.cols(), CV_8UC1);
   for (int i=0; i<img.rows(); i++) {
