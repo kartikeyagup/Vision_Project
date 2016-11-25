@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <string>
+#include "common.h"
 #include <Eigen/Dense>
 
 struct total_data {
@@ -92,7 +93,6 @@ void initialise(total_data &input, std::string out_dir,
   std::vector<Eigen::MatrixXd> &VbX, std::vector<Eigen::MatrixXd> &VbY);
 
 void form_motion_field(int rows, int cols, cv::Mat homo, Eigen::MatrixXd &mx, Eigen::MatrixXd &my);
-Eigen::MatrixXd normalize(cv::Mat m); 
 
 void save_normalised(Eigen::MatrixXd &img, std::string path);
 

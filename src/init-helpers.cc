@@ -231,7 +231,7 @@ void initialise(total_data &input, std::string out_dir,
 
   for(int i = 0; i<input.base_img.rows;i++){
     for(int j=0;j<input.base_img.cols;j++){
-      A(i, j) = 0.1;
+      A(i, j) = 1.0;
       // Traverse warped images
       float minsofar = ((int) (input.base_img.at<cv::Vec3b>(i, j)[0])) + 
                        ((int) (input.base_img.at<cv::Vec3b>(i, j)[1])) +
@@ -280,22 +280,6 @@ void form_motion_field(int rows, int cols, cv::Mat homo, Eigen::MatrixXd &mx, Ei
   }
 }
   
-Eigen::MatrixXd normalize(cv::Mat inp) {
-  cv::Mat m;
-  cv::cvtColor(inp, m, CV_BGR2GRAY);
-  Eigen::MatrixXd answer(m.rows,m.cols);
-  for(int i=0;i<m.rows;i++){
-    for(int j=0;j<m.cols;j++){
-      answer(i,j) = ((int) (inp.at<cv::Vec3b>(i, j)[0])) + 
-                    ((int) (inp.at<cv::Vec3b>(i, j)[1])) +
-                    ((int) (inp.at<cv::Vec3b>(i, j)[2]));
-      answer(i,j) /= (3*255.0);
-      // answer(i,j) = ((int) m.at<uchar>(i,j))/255.0;
-    }
-  }
-  return answer;
-}
-
 void save_normalised(Eigen::MatrixXd &img, std::string path) {
   cv::Mat conv_img(img.rows(), img.cols(), CV_8UC1);
   for (int i=0; i<img.rows(); i++) {

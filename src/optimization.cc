@@ -65,7 +65,7 @@ int num_images;
 
 total_data input;
 
-DEFINE_string(minimizer, "trust_region",
+DEFINE_string(minimizer, "line_search",
               "Minimizer type to use, choices are: line_search & trust_region");
  
 struct dynamic_data_term {
@@ -84,7 +84,7 @@ struct dynamic_data_term {
     for(int t = 0; t < num_images; t++) {
       Eigen::MatrixXd iovo = warp(io, Orig_VoX[t], Orig_VoY[t]);
       Eigen::MatrixXd ibvb = warp(ib, Orig_VbX[t], Orig_VbY[t]);
-      Eigen::MatrixXd iavo = warp(a , Orig_VoX[t], Orig_VoY[t]);    
+      Eigen::MatrixXd iavo = warp(a , Orig_VoX[t], Orig_VoY[t]);
       assert(iovo.rows() == ibvb.rows());
       assert(iovo.cols() == ibvb.cols());
       assert(iavo.rows() == ibvb.rows());
@@ -99,12 +99,44 @@ struct dynamic_data_term {
 
     }
     residual[0] = abc;
-    residual[0] +=  (param1 * ((double) delta(a).norm()));
-    residual[0] += (param2 * ((double) (L1Norm(delta(io)) + L1Norm(delta(ib)))));
-    residual[0] += (param3 * (double) (L(io,ib)));
+    // residual[0] +=  (param1 * ((double) delta(a).norm()));
+    // residual[0] += (param2 * ((double) (L1Norm(delta(io)) + L1Norm(delta(ib)))));
+    // residual[0] += (param3 * (double) (L(io,ib)));
     std::cout << "\rNum iter "<< numiter <<" Residual is " << residual[0] << " ,,,,,,,," << std::flush;
     numiter++;
     // std::cout << io.norm() <<std::endl;
+    return true;
+  }
+};
+
+// struct dynamic_grad_a {
+//   bool operator()(double const* const* parameters,
+//                                         double* residual) const {
+//     Eigen::MatrixXd a  = Eigen::Map<Eigen::MatrixXd>((double*) parameters[0], img_rows, img_cols);
+//     double param = 1;
+//     residual[0] =  (param * ((double) delta(a).norm()));
+//     return true;
+//   }
+// };
+
+struct dynamic_norm_l1_ioib {
+  bool operator()(double const* const* parameters,
+                                        double* residual) const {
+    double param = 100;
+    Eigen::MatrixXd io = Eigen::Map<Eigen::MatrixXd>((double*) parameters[0], img_rows, img_cols);
+    Eigen::MatrixXd ib = Eigen::Map<Eigen::MatrixXd>((double*) parameters[1], img_rows, img_cols);
+    residual[0] = (param * ((double) (L1Norm(delta(io)) + L1Norm(delta(ib)))));
+    return true;
+  }
+};
+
+struct dynamic_l {
+  bool operator()(double const* const* parameters,
+                                        double* residual) const {
+    double param = 100;
+    Eigen::MatrixXd io = Eigen::Map<Eigen::MatrixXd>((double*) parameters[0], img_rows, img_cols);
+    Eigen::MatrixXd ib = Eigen::Map<Eigen::MatrixXd>((double*) parameters[1], img_rows, img_cols);
+    residual[0] = (param * (double) (L(io,ib)));
     return true;
   }
 };
@@ -133,29 +165,34 @@ public:
     std::cout << "\rResidual is " << residual[0] << " ,,,,,,,,,,,,,,,,,, " << std::flush;
     return true;
   }
+
   dynamic_data_term_motion(int im){
     img_id = im;
   }
 };
 
+struct dynamic_motion {
+  bool operator()(double const* const* parameters,
+                                        double* residual) const {
+    // residual[0] = T(0.0);
+    double param1 = 10;
+
+    Eigen::MatrixXd vox = Eigen::Map<Eigen::MatrixXd>((double*) parameters[0], img_rows, img_cols);
+    Eigen::MatrixXd voy = Eigen::Map<Eigen::MatrixXd>((double*) parameters[1], img_rows, img_cols);
+    Eigen::MatrixXd vbx = Eigen::Map<Eigen::MatrixXd>((double*) parameters[2], img_rows, img_cols);
+    Eigen::MatrixXd vby = Eigen::Map<Eigen::MatrixXd>((double*) parameters[3], img_rows, img_cols);
+    residual[0] = param1 * ((L1Norm(delta(vox) + delta(voy))/2) + (L1Norm(delta(vbx) + delta(vby))/2));
+    return true;
+  }
+};
+
 int ceressolver() {
+  numiter = 0;
   std::cout<<"Starting on the first problem\n";
   Problem problem;
   
   const int dim = img_cols * img_rows;
-
-  // double *x1 = Orig_Io.data();
-  // double *x2 = Orig_Ib.data();
-  // double *x3 = Orig_A.data();
-
-  Eigen::Matrix2d matrix;;
-  // double x1 = 3;
-  // double x2 = -1;
-  // double x3 = 0;
-  // // double x4 = 2;
-  // matrix << x1 ,x2,
-  //           x3, x4;
-
+  Eigen::Matrix2d matrix;
   double* m = Orig_Io.data();
 
   DynamicNumericDiffCostFunction<dynamic_data_term>* c1 = new 
@@ -170,18 +207,55 @@ int ceressolver() {
   v.push_back(Orig_Ib.data());
   v.push_back(Orig_A.data());
   problem.AddResidualBlock(c1, NULL, v);
+  problem.SetParameterBlockConstant(Orig_A.data());
+  // Solver::Options options;
+
+  // DynamicNumericDiffCostFunction<dynamic_grad_a>* c2 = new 
+  //                                       DynamicNumericDiffCostFunction<dynamic_grad_a> (new dynamic_grad_a());
+                      
+  // c2->SetNumResiduals(1);
+  // std::vector<double*> v2;
+  // c2->AddParameterBlock(dim);
+  // v2.push_back(Orig_A.data());
+  // problem.AddResidualBlock(c2, NULL, v2);
+
+  DynamicNumericDiffCostFunction<dynamic_norm_l1_ioib>* c3 = new 
+                                        DynamicNumericDiffCostFunction<dynamic_norm_l1_ioib> (new dynamic_norm_l1_ioib());
+                      
+  c3->SetNumResiduals(1);
+  std::vector<double*> v3;
+  c3->AddParameterBlock(dim);
+  c3->AddParameterBlock(dim);
+  // c3->AddParameterBlock(dim);
+  v3.push_back(Orig_Io.data());
+  v3.push_back(Orig_Ib.data());
+  // v.push_back(Orig_A.data());
+  problem.AddResidualBlock(c3, NULL, v3);
+
+  DynamicNumericDiffCostFunction<dynamic_l>* c4 = new 
+                                        DynamicNumericDiffCostFunction<dynamic_l> (new dynamic_l());
+                      
+  c4->SetNumResiduals(1);
+  std::vector<double*> v4;
+  c4->AddParameterBlock(dim);
+  c4->AddParameterBlock(dim);
+  // c3->AddParameterBlock(dim);
+  v4.push_back(Orig_Io.data());
+  v4.push_back(Orig_Ib.data());
+  // v.push_back(Orig_A.data());
+  problem.AddResidualBlock(c4, NULL, v4);
+
   Solver::Options options;
+
   LOG_IF(FATAL, !ceres::StringToMinimizerType(FLAGS_minimizer,
                                               &options.minimizer_type))
       << "Invalid minimizer: " << FLAGS_minimizer
       << ", valid options are: trust_region and line_search.";
-  options.max_num_iterations = 100;
-  // options.function_tolerance = 1;
-  options.linear_solver_type = ceres::ITERATIVE_SCHUR;
+  options.max_num_iterations = 10;
+  options.linear_solver_type = ceres::CGNR;
   options.preconditioner_type = ceres::IDENTITY;
-
   options.minimizer_progress_to_stdout = true;
-  options.num_threads = 20;
+  options.num_threads = 40;
   // options.use_inner_iterations=true;
   options.num_linear_solver_threads = 40;
 
@@ -191,6 +265,7 @@ int ceressolver() {
   std::cout << summary.FullReport() << "\n";
 
   Problem problem2;
+  numiter = 0;
   std::cout<<"Starting on the second problem\n";
   for(int t=0;t<num_images;t++){
     
@@ -201,12 +276,26 @@ int ceressolver() {
     data_term_motion->AddParameterBlock(dim);
     data_term_motion->AddParameterBlock(dim);
     data_term_motion->AddParameterBlock(dim);
-    std::vector<double *> v4;
-    v4.push_back(Orig_VoX[t].data());
-    v4.push_back(Orig_VoY[t].data());
-    v4.push_back(Orig_VbX[t].data());
-    v4.push_back(Orig_VbY[t].data());
-    problem2.AddResidualBlock(data_term_motion, NULL, v4);
+    std::vector<double *> v5;
+    v5.push_back(Orig_VoX[t].data());
+    v5.push_back(Orig_VoY[t].data());
+    v5.push_back(Orig_VbX[t].data());
+    v5.push_back(Orig_VbY[t].data());
+    problem2.AddResidualBlock(data_term_motion, NULL, v5);
+
+    DynamicNumericDiffCostFunction<dynamic_motion>* data_term_motion1 = new 
+                                        DynamicNumericDiffCostFunction<dynamic_motion> (new dynamic_motion());
+    data_term_motion1->SetNumResiduals(1);
+    data_term_motion1->AddParameterBlock(dim);
+    data_term_motion1->AddParameterBlock(dim);
+    data_term_motion1->AddParameterBlock(dim);
+    data_term_motion1->AddParameterBlock(dim);
+    std::vector<double *> v6;
+    v6.push_back(Orig_VoX[t].data());
+    v6.push_back(Orig_VoY[t].data());
+    v6.push_back(Orig_VbX[t].data());
+    v6.push_back(Orig_VbY[t].data());
+    problem2.AddResidualBlock(data_term_motion1, NULL, v6);
   }
   Solver::Options options2;
   LOG_IF(FATAL, !ceres::StringToMinimizerType(FLAGS_minimizer,
@@ -214,14 +303,15 @@ int ceressolver() {
       << "Invalid minimizer: " << FLAGS_minimizer
       << ", valid options are: trust_region and line_search.";
 
+  options2.max_num_iterations = 10;
   options2.linear_solver_type = ceres::CGNR;
   // options2.line_search_direction_type = ceres::BFGS;
   options2.preconditioner_type=ceres::IDENTITY;
   // options2.use_inner_iterations = true;
-  options2.use_nonmonotonic_steps = true;
+  // options2.use_nonmonotonic_steps = true;
   options2.minimizer_progress_to_stdout = true;
-  options2.num_threads = 20;
-  options2.num_linear_solver_threads = 20;
+  options2.num_threads = 40;
+  options2.num_linear_solver_threads = 40;
 
   Solver::Summary summary2;
   Solve(options2, &problem2, &summary2);
