@@ -70,7 +70,7 @@ struct dynamic_data_term {
   bool operator()(double const* const* parameters,
                                         double* residual) const {
     // residual[0] = T(0.0); // Might have to remove this
-
+    // std::cout << "Adding shit\n";
     // double param1 = 1;
     // double param2 = 100;
     // double param3 = 1000;
@@ -83,33 +83,37 @@ struct dynamic_data_term {
     // //  The first term is added here
     // Eigen::MatrixXd io = Eigen::Map<Eigen::MatrixXd>((double*)v.data(), img_rows, img_cols);
     Eigen::MatrixXd io = Eigen::Map<Eigen::MatrixXd>((double*) parameters[0], img_rows, img_cols);
-    // Eigen::MatrixXd ib = Eigen::Map<Eigen::MatrixXd>((double*) parameters[1], img_rows, img_cols);
-    // Eigen::MatrixXd a  = Eigen::Map<Eigen::MatrixXd>((double*) parameters[2], img_rows, img_cols);
+    Eigen::MatrixXd ib = Eigen::Map<Eigen::MatrixXd>((double*) parameters[1], img_rows, img_cols);
+    Eigen::MatrixXd a  = Eigen::Map<Eigen::MatrixXd>((double*) parameters[2], img_rows, img_cols);
+    double abc=0;
+    // std::cout << "Adding shit\n";
     // // residual[0] = T(0.0);
-    // for(int t = 0; t < num_images; t++) {
-    //   Eigen::MatrixXd iovo = warp(io, Orig_VoX[t], Orig_VoY[t]);
-    //   Eigen::MatrixXd ibvb = warp(ib, Orig_VbX[t], Orig_VbY[t]);
-    //   Eigen::MatrixXd iavo = warp(a , Orig_VoX[t], Orig_VoY[t]);
+    for(int t = 0; t < num_images; t++) {
+      Eigen::MatrixXd iovo = warp(io, Orig_VoX[t], Orig_VoY[t]);
+      Eigen::MatrixXd ibvb = warp(ib, Orig_VbX[t], Orig_VbY[t]);
+      Eigen::MatrixXd iavo = warp(a , Orig_VoX[t], Orig_VoY[t]);
+      // std::cout << "heheh\n";
 
-    //   // std::cout<<"Image number: "<<t+1<<std::endl;
+      // std::cout<<"Image number: "<<t+1<<std::endl;
       
-    //   assert(iovo.rows() == ibvb.rows());
-    //   assert(iovo.cols() == ibvb.cols());
-    //   assert(iavo.rows() == ibvb.rows());
-    //   assert(iavo.cols() == ibvb.cols());
-    //   // assert(io.rows() == )
-    //   Eigen::MatrixXd iavoibvb = iavo.cwiseProduct(ibvb);
+      assert(iovo.rows() == ibvb.rows());
+      assert(iovo.cols() == ibvb.cols());
+      assert(iavo.rows() == ibvb.rows());
+      assert(iavo.cols() == ibvb.cols());
+      // assert(io.rows() == )
+      Eigen::MatrixXd iavoibvb = iavo.cwiseProduct(ibvb);
 
-    //   residual[0] += ((input.normalised_frames[t] - iovo - iavoibvb).lpNorm<1>());
-    // }
+      abc += ((input.normalised_frames[t] - iovo - iavoibvb).lpNorm<1>());
+    }
+    residual[0] = abc;
     // std::cout << "dynamic_data_term" << std::endl;
-    residual[0] += io.norm();
+    // residual[0] = io.norm();
     // residual[0] = 1;
     // std::cout << io.norm() <<std::endl;
     // residual[0] +=  (param1 * ((double) delta(a).norm()));
     // residual[0] += (param2 * ((double) (delta(io).lpNorm<1>() + delta(ib).lpNorm<1>())));
     // residual[0] += (param3 * (double) (L(io,ib)));
-    std::cout << residual[0] <<std::endl;
+    // std::cout << io.norm() <<std::endl;
     return true;
   }
 };
@@ -189,7 +193,7 @@ int ceressolver() {
   
   const int dim = img_cols * img_rows;
 
-  double *x1 = Orig_Io.data();
+  // double *x1 = Orig_Io.data();
   // double *x2 = Orig_Ib.data();
   // double *x3 = Orig_A.data();
 
@@ -214,13 +218,16 @@ int ceressolver() {
   // }
   // c1->AddParameterBlock(1);
   c1->AddParameterBlock(dim);
+  c1->AddParameterBlock(dim);
+  c1->AddParameterBlock(dim);
   // c1->AddParameterBlock(dim);
-  
-  v.push_back(x1);
-  // v.push_back(x2);
-  // v.push_back(x3);
+  // std::cout << "Adding shit\n";
+  v.push_back(Orig_Io.data());
+  v.push_back(Orig_Ib.data());
+  v.push_back(Orig_A.data());
+  // std::cout << "Adding shit\n";
   problem.AddResidualBlock(c1, NULL, v);
-
+  // std::cout << "Adding shit\n";
 
 
   Solver::Options options;
@@ -294,6 +301,7 @@ Eigen::MatrixXd delta(Eigen::MatrixXd A) {
 
 double L(Eigen::MatrixXd &input1, Eigen::MatrixXd &input2) {
 	double product = 0;
+  assert(input1.rows() == input2.rows() && input2.cols() == input1.cols());
 	Eigen::MatrixXd del1 = delta(input1);
 	Eigen::MatrixXd del2 = delta(input2);
 	for(int i = 0 ; i < del1.rows() ; i++){
@@ -307,18 +315,22 @@ double L(Eigen::MatrixXd &input1, Eigen::MatrixXd &input2) {
 Eigen::MatrixXd warp(Eigen::MatrixXd &mat, Eigen::MatrixXd &mx, Eigen::MatrixXd &my) {
   Eigen::MatrixXd result(mat.rows(), mat.cols());
   result.setZero();
-  double limy = mat.rows();
-  double limx = mat.cols();
+  int limy = mat.rows();
+  int limx = mat.cols();
+  assert(limy == mx.rows() and limy== my.rows());
+  assert(limx == mx.cols() and limx== my.cols());
   // assert(limx = motion.data[0].size());
   // assert(limy = motion.data.size());
   for(int i=0; i<limy; i++){
     for(int j=0; j<limx; j++){
       int posx = j + mx(i,j);
       int posy = i + my(i,j);
-      if(posx<=limx && posy<=limy)
-        result(posy, posx) = mat(i,j); 
+      // std::cout << i<< ", "<< j <<" went to " << posy <<", " << posx<<"\n";
+      if(posx<limx && posy<limy && posx >=0 && posy >=0)
+        result(posy, posx) = mat(i,j);
     }
   }
+  // std::cout << limy << "\t" << limx <<"\n";
   return result;
 }
 
