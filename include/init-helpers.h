@@ -9,10 +9,10 @@
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <unordered_map>
+#include <algorithm>
 #include <string>
 #include <Eigen/Dense>
 
-// TODO KG Normalised part
 struct total_data {
   cv::Mat base_img;
   Eigen::MatrixXd base_img_normalised;
@@ -78,6 +78,13 @@ bool Track(std::vector<cv::Point2f> &edge,
  * @brief Function meant to initialise the data
  * @param input all images
  * @param out_dir debug directory to dump images in
+ * @param Io Eigen mat for obstruction part
+ * @param A obstruction alpha mat
+ * @param Ib Eigen mat for background
+ * @param VoX Eigen mat represtions motion along x for obs
+ * @param VoY Eigen mat represtions motion along y for obs
+ * @param VbX Eigen mat represtions motion along x for bg
+ * @param VbY Eigen mat represtions motion along y for bg
  */
 void initialise(total_data &input, std::string out_dir, 
   Eigen::MatrixXd &Io, Eigen::MatrixXd &A, Eigen::MatrixXd &Ib,
@@ -86,5 +93,7 @@ void initialise(total_data &input, std::string out_dir,
 
 void form_motion_field(int rows, int cols, cv::Mat homo, Eigen::MatrixXd &mx, Eigen::MatrixXd &my);
 Eigen::MatrixXd normalize(cv::Mat m); 
+
+void save_normalised(Eigen::MatrixXd &img, std::string path);
 
 #endif

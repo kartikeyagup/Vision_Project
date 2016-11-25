@@ -28,11 +28,16 @@ int main(int argc, char **argv)
   input.dump_data(FLAGS_out_dir);
   
   initialise(input, FLAGS_out_dir, Orig_Io, Orig_A, Orig_Ib, Orig_VoX, Orig_VoY, Orig_VbX, Orig_VbY);
-  // std::cout<<Orig_Io<<"\n";
   img_rows = Orig_Io.rows();
   img_cols = Orig_Io.cols();
-  num_images = input.frames.size();
-  num_images -= 1;
+  num_images = input.frames.size() - 1;
+
+  save_normalised(Orig_Io, FLAGS_out_dir+"origio.png");
+  save_normalised(Orig_Ib, FLAGS_out_dir+"origib.png");
+  save_normalised(input.base_img_normalised, FLAGS_out_dir+"origbase.png");
+  for (int i=0; i<input.frames.size(); i++) {
+    save_normalised(input.normalised_frames[i], FLAGS_out_dir+"origbase_"+std::to_string(i)+".png");
+  }
   ceressolver();
 
   return 0;
