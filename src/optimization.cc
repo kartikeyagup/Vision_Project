@@ -77,23 +77,23 @@ struct dynamic_data_term {
 
     Eigen::MatrixXd io = Eigen::Map<Eigen::MatrixXd>((double*) parameters[0], img_rows, img_cols);
     Eigen::MatrixXd ib = Eigen::Map<Eigen::MatrixXd>((double*) parameters[1], img_rows, img_cols);
-    Eigen::MatrixXd a  = Eigen::Map<Eigen::MatrixXd>((double*) parameters[2], img_rows, img_cols);
+    // Eigen::MatrixXd a  = Eigen::Map<Eigen::MatrixXd>((double*) parameters[2], img_rows, img_cols);
     double abc=0;
     // std::cout << "Adding shit\n";
     // // residual[0] = T(0.0);
     for(int t = 0; t < num_images; t++) {
       Eigen::MatrixXd iovo = warp(io, Orig_VoX[t], Orig_VoY[t]);
       Eigen::MatrixXd ibvb = warp(ib, Orig_VbX[t], Orig_VbY[t]);
-      Eigen::MatrixXd iavo = warp(a , Orig_VoX[t], Orig_VoY[t]);
-      assert(iovo.rows() == ibvb.rows());
-      assert(iovo.cols() == ibvb.cols());
-      assert(iavo.rows() == ibvb.rows());
-      assert(iavo.cols() == ibvb.cols());
+      // Eigen::MatrixXd iavo = warp(a , Orig_VoX[t], Orig_VoY[t]);
+      // assert(iovo.rows() == ibvb.rows());
+      // assert(iovo.cols() == ibvb.cols());
+      // assert(iavo.rows() == ibvb.rows());
+      // assert(iavo.cols() == ibvb.cols());
       // assert(io.rows() == )
-      Eigen::MatrixXd iavoibvb = iavo.cwiseProduct(ibvb);
+      // Eigen::MatrixXd iavoibvb = iavo.cwiseProduct(ibvb);
 
       // std::cout << "Abc changed from " << abc;
-      Eigen::MatrixXd s = input.normalised_frames[t] - iovo - iavoibvb;
+      Eigen::MatrixXd s = input.normalised_frames[t] - iovo - ibvb;
       // abc += ((input.normalised_frames[t] - iovo - iavoibvb).lpNorm<1>());
       abc += L1Norm(s);
 
