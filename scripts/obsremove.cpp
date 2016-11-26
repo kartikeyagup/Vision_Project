@@ -64,8 +64,17 @@ int main(int argc, char **argv)
   }
   assert(input.normalised_frames[0].cols() == Orig_Io.cols());
   assert(input.normalised_frames[0].rows() == Orig_Io.rows());
-  for (int i=0; i<4; i++)
+
+  // for (int i=0; i<Orig_VoX[0].rows(); i++) {
+  //   for (int j=0; j<Orig_VoX[0].cols(); j++) {
+  //     std::cerr<< Orig_VbX[0](i, j) << "\t" << Orig_VbY[0](i,j) <<"\n";
+  //   }
+  // }
+  // return 0;
+
+  for (int i=0; i<20; i++)
     ceressolver();
+
 
   for (int it=2; it<=initfact; it*=2) {
     save_normalised(Orig_Io, "Final_O_" + std::to_string(it) + ".png");

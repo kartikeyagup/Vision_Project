@@ -77,47 +77,18 @@ struct dynamic_data_term {
 
     Eigen::MatrixXd io = Eigen::Map<Eigen::MatrixXd>((double*) parameters[0], img_rows, img_cols);
     Eigen::MatrixXd ib = Eigen::Map<Eigen::MatrixXd>((double*) parameters[1], img_rows, img_cols);
-    // Eigen::MatrixXd a  = Eigen::Map<Eigen::MatrixXd>((double*) parameters[2], img_rows, img_cols);
     double abc=0;
-    // std::cout << "Adding shit\n";
-    // // residual[0] = T(0.0);
     for(int t = 0; t < num_images; t++) {
       Eigen::MatrixXd iovo = warp(io, Orig_VoX[t], Orig_VoY[t]);
       Eigen::MatrixXd ibvb = warp(ib, Orig_VbX[t], Orig_VbY[t]);
-      // Eigen::MatrixXd iavo = warp(a , Orig_VoX[t], Orig_VoY[t]);
-      // assert(iovo.rows() == ibvb.rows());
-      // assert(iovo.cols() == ibvb.cols());
-      // assert(iavo.rows() == ibvb.rows());
-      // assert(iavo.cols() == ibvb.cols());
-      // assert(io.rows() == )
-      // Eigen::MatrixXd iavoibvb = iavo.cwiseProduct(ibvb);
-
-      // std::cout << "Abc changed from " << abc;
       Eigen::MatrixXd s = input.normalised_frames[t] - iovo - ibvb;
-      // abc += ((input.normalised_frames[t] - iovo - iavoibvb).lpNorm<1>());
       abc += L1Norm(s);
-
     }
     residual[0] = abc;
-    // residual[0] +=  (param1 * ((double) delta(a).norm()));
-    // residual[0] += (param2 * ((double) (L1Norm(delta(io)) + L1Norm(delta(ib)))));
-    // residual[0] += (param3 * (double) (L(io,ib)));
-    // std::cout << "\rNum iter "<< numiter <<" Residual is " << residual[0] << " ,,,,,,,," << std::flush;
     numiter++;
-    // std::cout << io.norm() <<std::endl;
     return true;
   }
 };
-
-// struct dynamic_grad_a {
-//   bool operator()(double const* const* parameters,
-//                                         double* residual) const {
-//     Eigen::MatrixXd a  = Eigen::Map<Eigen::MatrixXd>((double*) parameters[0], img_rows, img_cols);
-//     double param = 1;
-//     residual[0] =  (param * ((double) delta(a).norm()));
-//     return true;
-//   }
-// };
 
 struct dynamic_norm_l1_ioib {
   bool operator()(double const* const* parameters,
@@ -152,13 +123,9 @@ public:
     Eigen::MatrixXd voy = Eigen::Map<Eigen::MatrixXd>((double*) parameters[1], img_rows, img_cols);
     Eigen::MatrixXd vbx = Eigen::Map<Eigen::MatrixXd>((double*) parameters[2], img_rows, img_cols);
     Eigen::MatrixXd vby = Eigen::Map<Eigen::MatrixXd>((double*) parameters[3], img_rows, img_cols);
-    // int img_id = 0;
     Eigen::MatrixXd iovo = warp(Orig_Io, vox, voy);
     Eigen::MatrixXd ibvb = warp(Orig_Ib, vbx, vby);
-    Eigen::MatrixXd iavo = warp(Orig_A, vox, voy);
-    Eigen::MatrixXd iavoibvb = iavo.cwiseProduct(ibvb);
-    residual[0] = (L1Norm(input.normalised_frames[img_id] - iovo - iavoibvb));
-    // std::cout << "\rResidual is " << residual[0] << " ,,,,,,,,,,,,,,,,,, " << std::flush;
+    residual[0] = (L1Norm(input.normalised_frames[img_id] - iovo - ibvb));
     return true;
   }
 
@@ -170,14 +137,13 @@ public:
 struct dynamic_motion {
   bool operator()(double const* const* parameters,
                                         double* residual) const {
-    // residual[0] = T(0.0);
     double param1 = 10;
 
     Eigen::MatrixXd vox = Eigen::Map<Eigen::MatrixXd>((double*) parameters[0], img_rows, img_cols);
     Eigen::MatrixXd voy = Eigen::Map<Eigen::MatrixXd>((double*) parameters[1], img_rows, img_cols);
     Eigen::MatrixXd vbx = Eigen::Map<Eigen::MatrixXd>((double*) parameters[2], img_rows, img_cols);
     Eigen::MatrixXd vby = Eigen::Map<Eigen::MatrixXd>((double*) parameters[3], img_rows, img_cols);
-    residual[0] = param1 * ((L1Norm(delta(vox) + delta(voy))/2) + (L1Norm(delta(vbx) + delta(vby))/2));
+    residual[0] = param1 * ((L1Norm(delta(vox) + delta(voy))) + (L1Norm(delta(vbx) + delta(vby))));
     return true;
   }
 };
@@ -198,22 +164,9 @@ int ceressolver() {
   std::vector<double*> v;
   c1->AddParameterBlock(dim);
   c1->AddParameterBlock(dim);
-  c1->AddParameterBlock(dim);
   v.push_back(Orig_Io.data());
   v.push_back(Orig_Ib.data());
-  v.push_back(Orig_A.data());
   problem.AddResidualBlock(c1, NULL, v);
-  problem.SetParameterBlockConstant(Orig_A.data());
-  // Solver::Options options;
-
-  // DynamicNumericDiffCostFunction<dynamic_grad_a>* c2 = new 
-  //                                       DynamicNumericDiffCostFunction<dynamic_grad_a> (new dynamic_grad_a());
-                      
-  // c2->SetNumResiduals(1);
-  // std::vector<double*> v2;
-  // c2->AddParameterBlock(dim);
-  // v2.push_back(Orig_A.data());
-  // problem.AddResidualBlock(c2, NULL, v2);
 
   DynamicNumericDiffCostFunction<dynamic_norm_l1_ioib>* c3 = new 
                                         DynamicNumericDiffCostFunction<dynamic_norm_l1_ioib> (new dynamic_norm_l1_ioib());
@@ -222,10 +175,8 @@ int ceressolver() {
   std::vector<double*> v3;
   c3->AddParameterBlock(dim);
   c3->AddParameterBlock(dim);
-  // c3->AddParameterBlock(dim);
   v3.push_back(Orig_Io.data());
   v3.push_back(Orig_Ib.data());
-  // v.push_back(Orig_A.data());
   problem.AddResidualBlock(c3, NULL, v3);
 
   DynamicNumericDiffCostFunction<dynamic_l>* c4 = new 
@@ -235,10 +186,8 @@ int ceressolver() {
   std::vector<double*> v4;
   c4->AddParameterBlock(dim);
   c4->AddParameterBlock(dim);
-  // c3->AddParameterBlock(dim);
   v4.push_back(Orig_Io.data());
   v4.push_back(Orig_Ib.data());
-  // v.push_back(Orig_A.data());
   problem.AddResidualBlock(c4, NULL, v4);
 
   Solver::Options options;
@@ -252,24 +201,21 @@ int ceressolver() {
   options.preconditioner_type = ceres::IDENTITY;
   options.minimizer_progress_to_stdout = true;
   options.num_threads = 40;
-  // options.use_inner_iterations=true;
   options.num_linear_solver_threads = 40;
-
-  // options.initial_trust_region_radius = 1e-2;
-  // options.max_trust_region_radius = 1;
+  options.initial_trust_region_radius = 1e-2;
+  options.max_trust_region_radius = 1e-1;
   options.parameter_tolerance = 1e-3;
-  // options.min_trust_region_radius = 1e-4;
-  // options.min_line_search_step_size = 1e-3;
+  options.min_trust_region_radius = 3e-4;
   Solver::Summary summary;
   Solve(options, &problem, &summary);
   std::cout << "HAHAHA" <<std::endl;
   std::cout << summary.FullReport() << "\n";
 
-  Problem problem2;
+  
   numiter = 0;
   std::cout<<"Starting on the second problem\n";
   for(int t=0;t<num_images;t++){
-    
+    Problem problem2;
     DynamicNumericDiffCostFunction<dynamic_data_term_motion>* data_term_motion = new 
                                         DynamicNumericDiffCostFunction<dynamic_data_term_motion> (new dynamic_data_term_motion(t));
     data_term_motion->SetNumResiduals(1);
@@ -297,29 +243,10 @@ int ceressolver() {
     v6.push_back(Orig_VbX[t].data());
     v6.push_back(Orig_VbY[t].data());
     problem2.AddResidualBlock(data_term_motion1, NULL, v6);
+    Solver::Summary summary2;
+    Solve(options, &problem2, &summary2);
+    std::cout << summary2.FullReport() << std::endl;  
   }
-  Solver::Options options2;
-  LOG_IF(FATAL, !ceres::StringToMinimizerType(FLAGS_minimizer,
-                                              &options.minimizer_type))
-      << "Invalid minimizer: " << FLAGS_minimizer
-      << ", valid options are: trust_region and line_search.";
-
-  options2.max_num_iterations = 10;
-  options2.linear_solver_type = ceres::CGNR;
-  options2.min_trust_region_radius = 1e-4;
-  // options2.min
-  // options2.line_search_direction_type = ceres::BFGS;
-  options2.preconditioner_type=ceres::IDENTITY;
-  // options2.use_inner_iterations = true;
-  // options2.use_nonmonotonic_steps = true;
-  options2.minimizer_progress_to_stdout = true;
-  options2.num_threads = 40;
-  options2.num_linear_solver_threads = 40;
-
-  Solver::Summary summary2;
-  Solve(options, &problem2, &summary2);
-  
-  std::cout << summary2.FullReport() << std::endl;
   return 0;
 }
 
@@ -370,17 +297,13 @@ Eigen::MatrixXd warp(Eigen::MatrixXd &mat, Eigen::MatrixXd &mx, Eigen::MatrixXd 
   int limx = mat.cols();
   assert(limy == mx.rows() and limy== my.rows());
   assert(limx == mx.cols() and limx== my.cols());
-  // assert(limx = motion.data[0].size());
-  // assert(limy = motion.data.size());
   for(int i=0; i<limy; i++){
     for(int j=0; j<limx; j++){
       int posx = j + mx(i,j);
       int posy = i + my(i,j);
-      // std::cout << i<< ", "<< j <<" went to " << posy <<", " << posx<<"\n";
       if(posx<limx && posy<limy && posx >=0 && posy >=0)
         result(posy, posx) = mat(i,j);
     }
   }
-  // std::cout << limy << "\t" << limx <<"\n";
   return result;
 }
