@@ -44,7 +44,7 @@ int main(int argc, char **argv)
   for (int i=0; i<num_images; i++) {
     orig_norm_mats.push_back(input.normalised_frames[i]);
   }
-
+  // return 0;
   const int initfact = 8;
   img_rows /= initfact;
   img_cols /= initfact;
@@ -76,6 +76,9 @@ int main(int argc, char **argv)
     Orig_Io = UpSampleMat(Orig_Io, 2);
     Orig_Ib = UpSampleMat(Orig_Ib, 2);
     Orig_A = UpSampleMat(Orig_A, 2);
+    Fix(Orig_Io);
+    Fix(Orig_Ib);
+    Fix(Orig_A);
     for (int i=0; i<num_images; i++) {
       Orig_VoX[i] = UpSampleMat(Orig_VoX[i], 2)*2;
       Orig_VoY[i] = UpSampleMat(Orig_VoY[i], 2)*2;

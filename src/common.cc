@@ -57,3 +57,15 @@ Eigen::MatrixXd normalize(cv::Mat inp) {
   }
   return answer;
 }
+
+void Fix(Eigen::MatrixXd &mat) {
+  for (int i=0; i<mat.rows(); i++) {
+    for (int j=0; j<mat.cols(); j++) {
+      if (mat(i,j) >1.0) {
+        mat(i,j) = 1.0;
+      } else if (mat(i,j) < 0) {
+        mat(i,j) = 0.0;
+      }
+    }
+  }
+}

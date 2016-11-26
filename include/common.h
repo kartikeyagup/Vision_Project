@@ -21,4 +21,7 @@ Eigen::MatrixXd UpSampleMat(Eigen::MatrixXd mt, int factor);
 Eigen::MatrixXd DownSampleFromCvMat(cv::Mat img, int cls, int rws);
 
 Eigen::MatrixXd normalize(cv::Mat inp);
+
+void Fix(Eigen::MatrixXd &mat);
+
 #endif

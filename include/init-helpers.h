@@ -4,6 +4,7 @@
 #include <vector>
 #include <iostream>
 #include <opencv2/core/core.hpp>
+#include <opencv2/video/tracking.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
@@ -15,19 +16,24 @@
 #include <Eigen/Dense>
 
 struct total_data {
-  cv::Mat base_img;
+  cv::Mat base_img, base_img_gr;
   Eigen::MatrixXd base_img_normalised;
   std::vector<cv::Mat> frames;
+  std::vector<cv::Mat> frames_gr;
   std::vector<Eigen::MatrixXd> normalised_frames;
 
   total_data() {};
   total_data(std::string inp_dir, int num_images) {
     assert(num_images>=2);
     base_img = cv::imread(inp_dir+"/img_0.png");
-
+    cv::cvtColor(base_img, base_img_gr, CV_BGR2GRAY);
+  
     for (int i=1; i<num_images; i++) {
       cv::Mat temp = cv::imread(inp_dir+"/img_"+std::to_string(i)+".png");
+      cv::Mat temp_gr;
+      cv::cvtColor(temp, temp_gr, CV_BGR2GRAY);
       frames.push_back(temp);
+      frames_gr.push_back(temp_gr);
     }
     
     assert(frames.size() + 1 == num_images);

@@ -247,7 +247,7 @@ int ceressolver() {
                                               &options.minimizer_type))
       << "Invalid minimizer: " << FLAGS_minimizer
       << ", valid options are: trust_region and line_search.";
-  options.max_num_iterations = 10;
+  options.max_num_iterations = 50;
   options.linear_solver_type = ceres::CGNR;
   options.preconditioner_type = ceres::IDENTITY;
   options.minimizer_progress_to_stdout = true;
@@ -352,6 +352,7 @@ double L1Norm(Eigen::MatrixXd mat) {
     }
     answer = std::max(answer, tempanswer);
   }
+  assert(answer>=0);
   return answer;
 }
 

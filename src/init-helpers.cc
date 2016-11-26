@@ -84,6 +84,34 @@ void GenerateWarped(cv::Mat &input_img, cv::Mat &target, Eigen::MatrixXd &VoX, E
   }
 }
 
+void GetGoodPoints(std::vector<cv::Point2f> &prevtracking,
+  std::vector<cv::Point2f> &inversetracking, 
+  std::vector<uchar> &status,
+  std::vector<uchar> &statusinv) {
+  int tot, removed;
+  tot = prevtracking.size();
+  removed=0;
+  for (int i=0; i<prevtracking.size(); i++)  {
+    if (status[i]==0) {
+      continue;
+    }
+    if (statusinv[i] == 0) {
+      status[i] = 0;
+      continue;
+    }
+    status[i]=0;
+    cv::Point2f temmpPoint = inversetracking[i]-prevtracking[i];
+    float magnitude = (temmpPoint.x)*(temmpPoint.x) + (temmpPoint.y)*(temmpPoint.y);
+    if (magnitude<=4) {
+      status[i]=1;
+    } else {
+      removed++;
+    }
+  }
+  // std::cout << "Removed " << removed << " points from " << tot << " points\n";
+  assert (removed < tot);
+}
+
 void initialise(total_data &input, std::string out_dir, 
   Eigen::MatrixXd &Io, Eigen::MatrixXd &A, Eigen::MatrixXd &Ib,
   std::vector<Eigen::MatrixXd> &VoX, std::vector<Eigen::MatrixXd> &VoY,
@@ -156,22 +184,63 @@ void initialise(total_data &input, std::string out_dir,
     int tot(0), mt(0);
     std::vector<cv::Point2f> initial_pts, final_pts, initial_pts_fg, final_pts_fg;
     std::vector<std::pair<cv::Point2f, std::vector<cv::Point2f> > > Edges, Edges_2, Edges_bg, Edges_fg;
-    for (auto it: all_edges) {
+    // for (auto it: all_edges) {
+    //   tot++;
+    //   int dx, dy;
+    //   if (it.second.size() < 10) {
+    //     continue;
+    //   } 
+    //   if (Track(it.second, input.base_img, input.frames[fr],  dx, dy)) {
+    //     mt++;
+    //     Edges.push_back(std::make_pair(cv::Point2f(dx, dy), it.second));
+    //     cv::Rect bb = cv::boundingRect(it.second);
+    //     for (auto it1: it.second) {
+    //       initial_pts.push_back(it1);
+    //       final_pts.push_back(it1 + cv::Point2f(dx, dy));
+    //     }
+    //   }
+    // }
+    std::vector<cv::Point2f> corners_prev, corners_inverse, corners;
+    int maxCorners = 100000;
+    double qualityLevel = 0.001;
+    double minDistance = 2;
+    int blockSize = 7;
+    bool useHarrisDetector = false;
+    double k = 0.04;
+    cv::Mat mask;
+    cv::goodFeaturesToTrack(input.base_img_gr,
+        corners_prev, 
+        maxCorners, 
+        qualityLevel, 
+        minDistance,
+        mask,
+        blockSize,
+        useHarrisDetector,
+        k);
+
+    std::vector<uchar> status, status_inverse;
+    std::vector<float> err;
+    cv::Size winSize(15, 15);
+    cv::TermCriteria termcrit(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 10, 0.03);
+    calcOpticalFlowPyrLK(input.base_img_gr, input.frames_gr[fr],
+        corners_prev, corners, status,
+        err, winSize, 2, termcrit, 0, 0.001);
+
+    calcOpticalFlowPyrLK(input.frames_gr[fr], input.base_img_gr,
+        corners, corners_inverse, status_inverse,
+        err, winSize, 2, termcrit, 0, 0.001);
+      
+    GetGoodPoints(corners_prev,corners_inverse,status,status_inverse);
+
+    for (int i=0; i<corners.size(); i++) {
       tot++;
-      int dx, dy;
-      if (it.second.size() < 10) {
-        continue;
-      } 
-      if (Track(it.second, input.base_img, input.frames[fr],  dx, dy)) {
+      if (status[i]) {
         mt++;
-        Edges.push_back(std::make_pair(cv::Point2f(dx, dy), it.second));
-        cv::Rect bb = cv::boundingRect(it.second);
-        for (auto it1: it.second) {
-          initial_pts.push_back(it1);
-          final_pts.push_back(it1 + cv::Point2f(dx, dy));
-        }
+        initial_pts.push_back(corners_prev[i]);
+        final_pts.push_back(corners[i]);
       }
     }
+
     std::cout << "Matched " << mt << " out of " << tot << "\n";
 
     cv::Mat tr1, tr2;
