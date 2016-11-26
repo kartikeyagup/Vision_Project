@@ -255,6 +255,10 @@ int ceressolver() {
   // options.use_inner_iterations=true;
   options.num_linear_solver_threads = 40;
 
+  // options.initial_trust_region_radius = 1e4;
+  // options.max_trust_region_radius = 1e16;
+  // options.min_trust_region_radius = 1e-;
+  // options.min_line_search_step_size = 1e-3;
   Solver::Summary summary;
   Solve(options, &problem, &summary);
   std::cout << "HAHAHA" <<std::endl;
@@ -299,8 +303,9 @@ int ceressolver() {
       << "Invalid minimizer: " << FLAGS_minimizer
       << ", valid options are: trust_region and line_search.";
 
-  options2.max_num_iterations = 10;
+  options2.max_num_iterations = 50;
   options2.linear_solver_type = ceres::CGNR;
+  options2.min_trust_region_radius = 1e-5;
   // options2.line_search_direction_type = ceres::BFGS;
   options2.preconditioner_type=ceres::IDENTITY;
   // options2.use_inner_iterations = true;

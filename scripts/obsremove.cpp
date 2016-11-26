@@ -45,7 +45,7 @@ int main(int argc, char **argv)
     orig_norm_mats.push_back(input.normalised_frames[i]);
   }
   // return 0;
-  const int initfact = 8;
+  const int initfact = 32;
   img_rows /= initfact;
   img_cols /= initfact;
   Orig_Io = DownSampleMat(Orig_Io, initfact);

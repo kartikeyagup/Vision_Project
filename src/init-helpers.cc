@@ -230,7 +230,7 @@ void initialise(total_data &input, std::string out_dir,
         corners, corners_inverse, status_inverse,
         err, winSize, 2, termcrit, 0, 0.001);
       
-    GetGoodPoints(corners_prev,corners_inverse,status,status_inverse);
+    GetGoodPoints(corners_prev, corners_inverse, status, status_inverse);
 
     for (int i=0; i<corners.size(); i++) {
       tot++;
@@ -238,9 +238,10 @@ void initialise(total_data &input, std::string out_dir,
         mt++;
         initial_pts.push_back(corners_prev[i]);
         final_pts.push_back(corners[i]);
+        // std::cout << corners[i] - corners_prev[i] << "\n";
       }
     }
-
+    // assert(false);
     std::cout << "Matched " << mt << " out of " << tot << "\n";
 
     cv::Mat tr1, tr2;
@@ -305,6 +306,8 @@ void initialise(total_data &input, std::string out_dir,
                        ((int) (input.base_img.at<cv::Vec3b>(i, j)[1])) +
                        ((int) (input.base_img.at<cv::Vec3b>(i, j)[2]));
       float bg = minsofar/(3*255.0);
+      float maxsofar = minsofar;
+      int ct = 1;
       for (int k=0; k<input.frames.size(); k++) {
         int presentcol = ((int) (warped[k].at<cv::Vec3b>(i, j)[0])) + 
                          ((int) (warped[k].at<cv::Vec3b>(i, j)[1])) +
@@ -312,10 +315,16 @@ void initialise(total_data &input, std::string out_dir,
         if (presentcol>0 && (presentcol<minsofar)) {
           minsofar = presentcol;
         }
+        if (presentcol>0) {
+          ct++;
+          maxsofar += presentcol;
+        }
       }
+      maxsofar /= ct;
       Ib(i, j) = minsofar/(3*255.0);
       // Set Ib as min
-      Io(i, j) = bg - Ib(i, j);
+      // Io(i, j) = bg - Ib(i, j);
+      Io(i, j) = ((maxsofar/(3*255.0)) - Ib(i, j));
       assert(Io(i,j) >= 0);
       // Set Io as subtraction
     }

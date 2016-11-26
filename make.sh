@@ -15,6 +15,6 @@ rm -rf ceres_try
 make -j4
 if [ -f obsremove ]; then 
   cd ..
-  build/obsremove -dirname=init_data3/ -num_images=5 -out_dir=out_data/
+  build/obsremove -dirname=init_data2_m/ -num_images=3 -out_dir=out_data/
   # build/ceres_try
 fi
