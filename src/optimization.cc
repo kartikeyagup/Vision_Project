@@ -247,7 +247,7 @@ int ceressolver() {
                                               &options.minimizer_type))
       << "Invalid minimizer: " << FLAGS_minimizer
       << ", valid options are: trust_region and line_search.";
-  options.max_num_iterations = 50;
+  options.max_num_iterations = 10;
   options.linear_solver_type = ceres::CGNR;
   options.preconditioner_type = ceres::IDENTITY;
   options.minimizer_progress_to_stdout = true;
@@ -255,9 +255,10 @@ int ceressolver() {
   // options.use_inner_iterations=true;
   options.num_linear_solver_threads = 40;
 
-  // options.initial_trust_region_radius = 1e4;
-  // options.max_trust_region_radius = 1e16;
-  // options.min_trust_region_radius = 1e-;
+  // options.initial_trust_region_radius = 1e-2;
+  // options.max_trust_region_radius = 1;
+  options.parameter_tolerance = 1e-3;
+  // options.min_trust_region_radius = 1e-4;
   // options.min_line_search_step_size = 1e-3;
   Solver::Summary summary;
   Solve(options, &problem, &summary);
@@ -303,9 +304,10 @@ int ceressolver() {
       << "Invalid minimizer: " << FLAGS_minimizer
       << ", valid options are: trust_region and line_search.";
 
-  options2.max_num_iterations = 50;
+  options2.max_num_iterations = 10;
   options2.linear_solver_type = ceres::CGNR;
-  options2.min_trust_region_radius = 1e-5;
+  options2.min_trust_region_radius = 1e-4;
+  // options2.min
   // options2.line_search_direction_type = ceres::BFGS;
   options2.preconditioner_type=ceres::IDENTITY;
   // options2.use_inner_iterations = true;
@@ -315,7 +317,7 @@ int ceressolver() {
   options2.num_linear_solver_threads = 40;
 
   Solver::Summary summary2;
-  Solve(options2, &problem2, &summary2);
+  Solve(options, &problem2, &summary2);
   
   std::cout << summary2.FullReport() << std::endl;
   return 0;
