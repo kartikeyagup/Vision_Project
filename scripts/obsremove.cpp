@@ -12,7 +12,7 @@ DEFINE_bool(reflection, true, "Removing a reflection or occlusion");
 
 extern Eigen::MatrixXd Orig_Io, Orig_Ib, Orig_A;
 extern std::vector<Eigen::MatrixXd> Orig_VoX, Orig_VoY, Orig_VbX, Orig_VbY;
-
+extern std::vector<Eigen::MatrixXd> Orig_VoX_US, Orig_VoY_US, Orig_VbX_US, Orig_VbY_US;
 extern int img_rows;
 extern int img_cols;
 extern int num_images;
@@ -31,6 +31,11 @@ int main(int argc, char **argv)
   img_rows = Orig_Io.rows();
   img_cols = Orig_Io.cols();
   num_images = input.frames.size();
+  Orig_VoX_US.resize(num_images);
+  Orig_VoY_US.resize(num_images);
+  Orig_VbX_US.resize(num_images);
+  Orig_VbY_US.resize(num_images);
+
 
   save_normalised(Orig_Io, FLAGS_out_dir+"origio.png");
   save_normalised(Orig_Ib, FLAGS_out_dir+"origib.png");
@@ -45,17 +50,22 @@ int main(int argc, char **argv)
     orig_norm_mats.push_back(input.normalised_frames[i]);
   }
   // return 0;
-  const int initfact = 32;
+  const int initfact = 16;
   img_rows /= initfact;
   img_cols /= initfact;
   Orig_Io = DownSampleMat(Orig_Io, initfact);
   Orig_Ib = DownSampleMat(Orig_Ib, initfact);
   Orig_A = DownSampleMat(Orig_A, initfact);
+  input.base_img_normalised = DownSampleFromCvMat(input.base_img, Orig_Io.cols(), Orig_Io.rows());
   for (int i=0; i<num_images; i++) {
     Orig_VoX[i] = DownSampleMat(Orig_VoX[i], initfact)/initfact;
     Orig_VoY[i] = DownSampleMat(Orig_VoY[i], initfact)/initfact;
     Orig_VbX[i] = DownSampleMat(Orig_VbX[i], initfact)/initfact;
     Orig_VbY[i] = DownSampleMat(Orig_VbY[i], initfact)/initfact;
+    Orig_VoX_US[i] = Orig_VoX[i];
+    Orig_VoY_US[i] = Orig_VoY[i];
+    Orig_VbX_US[i] = Orig_VbX[i];
+    Orig_VbY_US[i] = Orig_VbY[i];
     input.normalised_frames[i] = DownSampleFromCvMat(input.frames[i], Orig_VoX[i].cols(), Orig_VoX[i].rows());
     std::cout << "Vox " << Orig_VoX[i].rows() << "\t" << Orig_VoX[i].cols() << "\n";
     std::cout << "Norm frame " << input.normalised_frames[i].rows() << "\t" << input.normalised_frames[i].cols() << "\n";
@@ -73,12 +83,12 @@ int main(int argc, char **argv)
   // return 0;
 
   for (int i=0; i<20; i++)
-    ceressolver();
+    ceressolver(1, false);
 
 
   for (int it=2; it<=initfact; it*=2) {
-    save_normalised(Orig_Io, "Final_O_" + std::to_string(it) + ".png");
-    save_normalised(Orig_Ib, "Final_B_" + std::to_string(it) + ".png");
+    save_normalised(Orig_Io, "Final_O_"+std::to_string(initfact)+"_" + std::to_string(it) + "_included.png");
+    save_normalised(Orig_Ib, "Final_B_"+std::to_string(initfact)+"_" + std::to_string(it) + "_included.png");
 
     img_rows *=2;
     img_cols *=2;
@@ -88,22 +98,23 @@ int main(int argc, char **argv)
     Fix(Orig_Io);
     Fix(Orig_Ib);
     Fix(Orig_A);
+    input.base_img_normalised = DownSampleFromCvMat(input.base_img, Orig_Io.cols(), Orig_Io.rows());
     for (int i=0; i<num_images; i++) {
-      Orig_VoX[i] = UpSampleMat(Orig_VoX[i], 2)*2;
-      Orig_VoY[i] = UpSampleMat(Orig_VoY[i], 2)*2;
-      Orig_VbX[i] = UpSampleMat(Orig_VbX[i], 2)*2;
-      Orig_VbY[i] = UpSampleMat(Orig_VbY[i], 2)*2;
-      input.normalised_frames[i] = DownSampleFromCvMat(input.frames[i], Orig_VoX[i].cols(), Orig_VoX[i].rows());
+      Orig_VoX_US[i] = UpSampleMat(Orig_VoX[i], it)*it;
+      Orig_VoY_US[i] = UpSampleMat(Orig_VoY[i], it)*it;
+      Orig_VbX_US[i] = UpSampleMat(Orig_VbX[i], it)*it;
+      Orig_VbY_US[i] = UpSampleMat(Orig_VbY[i], it)*it;
+      input.normalised_frames[i] = DownSampleFromCvMat(input.frames[i], Orig_Io.cols(), Orig_Io.rows());
       std::cout << "Vox " << Orig_VoX[i].rows() << "\t" << Orig_VoX[i].cols() << "\n";
       std::cout << "Norm frame " << input.normalised_frames[i].rows() << "\t" << input.normalised_frames[i].cols() << "\n";
-      assert(input.normalised_frames[i].cols() == Orig_VoX[i].cols());
-      assert(input.normalised_frames[i].rows() == Orig_VoX[i].rows());
+      assert(input.normalised_frames[i].cols() == Orig_Io.cols());
+      assert(input.normalised_frames[i].rows() == Orig_Io.rows());
     }
-    ceressolver();
+    ceressolver(it, true);
   }
 
-  save_normalised(Orig_Io, "Final_O.png");
-  save_normalised(Orig_Ib, "Final_B.png");
+  save_normalised(Orig_Io, "Final_O_8.png");
+  save_normalised(Orig_Ib, "Final_B_8.png");
 
   return 0;
 }

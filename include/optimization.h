@@ -14,10 +14,12 @@
 #include <cmath>
 #include "common.h"
 
-Eigen::MatrixXd delta(Eigen::MatrixXd mat);
-int ceressolver();
+void delta(Eigen::MatrixXd &mat, Eigen::MatrixXd &delta);
+int ceressolver(int, bool);
 double L(Eigen::MatrixXd &input1, Eigen::MatrixXd &input2);
-Eigen::MatrixXd warp(Eigen::MatrixXd &m, Eigen::MatrixXd &mx, Eigen::MatrixXd &my);
-double L1Norm(Eigen::MatrixXd);
+void warp(Eigen::MatrixXd &m, Eigen::MatrixXd &mx, Eigen::MatrixXd &my, Eigen::MatrixXd &warped);
+double L1Norm(Eigen::MatrixXd &);
+double L1NormWithDelta(Eigen::MatrixXd &mat);
+double AddL1NormWithDelta(Eigen::MatrixXd &mat1, Eigen::MatrixXd &mat2);
 
 #endif

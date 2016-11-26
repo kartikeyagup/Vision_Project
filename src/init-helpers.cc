@@ -323,8 +323,8 @@ void initialise(total_data &input, std::string out_dir,
       maxsofar /= ct;
       Ib(i, j) = minsofar/(3*255.0);
       // Set Ib as min
-      // Io(i, j) = bg - Ib(i, j);
-      Io(i, j) = ((maxsofar/(3*255.0)) - Ib(i, j));
+      Io(i, j) = bg - Ib(i, j);
+      // Io(i, j) = ((maxsofar/(3*255.0)) - Ib(i, j));
       assert(Io(i,j) >= 0);
       // Set Io as subtraction
     }
